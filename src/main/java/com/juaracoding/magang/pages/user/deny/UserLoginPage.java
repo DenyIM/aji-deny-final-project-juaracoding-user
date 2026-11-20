@@ -33,10 +33,10 @@ public class UserLoginPage extends BasePage {
     @FindBy(css = "div.MuiAlert-message, div[role='alert'].MuiAlert-root")
     private WebElement alertMessage;
 
-    @FindBy(xpath = "//button[@aria-label='menu' or @aria-controls='profile-menu'] | //header//button[last()] | //*[contains(@class,'MuiIconButton-root')][.//svg]")
-    private WebElement burgerOrProfileMenuButton;
+    @FindBy(xpath = "//button[.//img[@alt='menu']]")
+    private WebElement burgerMenuButton;
 
-    @FindBy(xpath = "//button[normalize-space()='Logout' or contains(.,'Logout') or contains(.,'Keluar')] | //li[contains(.,'Logout') or contains(.,'Keluar')]")
+    @FindBy(xpath = "//button[normalize-space()='Logout']")
     private WebElement logoutButton;
 
     public UserLoginPage(WebDriver driver) {
@@ -150,32 +150,13 @@ public class UserLoginPage extends BasePage {
     }
 
     public void performLogout() {
-        logger.info("Performing User Logout from /apps/absent menu.");
-        try {
-            if (isDirectLogoutVisible()) {
-                click(logoutButton);
-                return;
-            }
-            click(burgerOrProfileMenuButton);
-            click(logoutButton);
-        } catch (Exception e) {
-            logger.warn("Primary logout locator failed, trying mobile burger/drawer fallback: {}", e.getMessage());
-            WebElement fallbackMenu = waitForClickability(
-                    By.xpath("(//button[contains(@class,'MuiIconButton-root')])[last()] | //img[contains(@src,'menu') or contains(@alt,'menu')]/ancestor::button | //button[@aria-label='menu']"));
-            click(fallbackMenu);
-            WebElement fallbackLogout = waitForClickability(
-                    By.xpath("//button[contains(.,'Logout') or contains(.,'Keluar')] | //li[contains(.,'Logout') or contains(.,'Keluar')] | //a[contains(.,'Logout') or contains(.,'Keluar')]"));
-            click(fallbackLogout);
-        }
-    }
+        logger.info("Performing User Logout from /apps/absent burger menu.");
+        wait.until(d -> "complete".equals(((JavascriptExecutor) d).executeScript("return document.readyState")));
+        WebElement menuBtn = waitForClickability(burgerMenuButton);
+        clickWithJS(menuBtn);
 
-    private boolean isDirectLogoutVisible() {
-        try {
-            return driver.findElements(By.xpath("//button[normalize-space()='Logout' or contains(.,'Logout') or contains(.,'Keluar')]"))
-                    .stream().anyMatch(WebElement::isDisplayed);
-        } catch (Exception e) {
-            return false;
-        }
+        WebElement logoutEl = waitForClickability(logoutButton);
+        clickWithJS(logoutEl);
     }
 
     public void navigateBack() {
