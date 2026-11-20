@@ -81,7 +81,7 @@ Total cakupan pengujian: **175 Test Cases User** (**120 Web UI** + **55 REST Ass
 *(Kerjakan pada feature branch terpisah sesuai aturan Git Workflow Opsi B; lakukan inspeksi DOM/locator live terlebih dahulu)*
 
 #### 👤 Bagian Tester Deny (`src/main/java/com/juaracoding/magang/pages/user/deny/`):
-- [ ] **4.1.** `UserLoginPage.java` (`/absen/login`: input email/password, ikon mata show/hide password, tombol Masuk, alert error, proteksi redirect `/apps/absent`, menu logout).
+- [x] **4.1.** `UserLoginPage.java` (`/absen/login`: input email/password, ikon mata show/hide password, tombol Masuk, alert error, proteksi redirect `/apps/absent`, menu logout).
 - [ ] **4.2.** `RegisterPage.java` (`/absen/register`: tautan Daftar Akun Baru, pencarian NIK, auto-fill Nama & Divisi, input email/password, upload foto wajah + preview & deteksi broken image, tautan Masuk).
 - [ ] **4.3.** `ResetPasswordPage.java` (halaman Lupa Password & Reset Password: request OTP/link reset, validasi email, input password baru & konfirmasi, penanganan token kadaluarsa).
 - [ ] **4.4.** `PermitPage.java` (`/apps/absent/permit`: form Izin Terlambat, Izin Pulang Cepat, tab Izin Off, modal Batal/Close, verifikasi kartu status `Pending` / `Approved` / `Rejected` + alasan penolakan).
@@ -100,7 +100,7 @@ Total cakupan pengujian: **175 Test Cases User** (**120 Web UI** + **55 REST Ass
 *(Setiap `@Test` wajib mencantumkan ID SIT pada `description` dan `ExtentTestManager.logInfo(...)`)*
 
 #### 👤 Bagian Tester Deny (`87 TCs = 60 UI + 27 API`):
-- [ ] **5.1.** `UserLoginTest.java` (`SIT_USR_UI_001–012`: 12 TCs — login valid/negatif, SQLi, XSS, proteksi auth `/apps/absent`, logout & browser back).
+- [x] **5.1.** `UserLoginTest.java` (`SIT_USR_UI_001–012`: 12 TCs — login valid/negatif, SQLi, XSS, proteksi auth `/apps/absent`, logout & browser back).
 - [ ] **5.2.** `RegisterTest.java` (`SIT_USR_UI_013–025`: 13 TCs — pool NIK valid/invalid/terpakai, upload valid/non-image, dan verifikasi defect broken image `024`).
 - [ ] **5.3.** `ResetPasswordTest.java` (`SIT_USR_UI_026–033`: 8 TCs — request reset email valid/invalid/kosong, submit password baru & token kadaluarsa).
 - [ ] **5.4.** `PermitTest.java` (`SIT_USR_UI_075–084`: 10 TCs — Izin Terlambat, Pulang Cepat, Izin Off, serta skenario **Hybrid API+UI** pada `SIT_USR_UI_083` via `AdminApiHelper`).
