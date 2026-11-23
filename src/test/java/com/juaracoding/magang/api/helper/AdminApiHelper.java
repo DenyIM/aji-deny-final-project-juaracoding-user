@@ -2,6 +2,7 @@ package com.juaracoding.magang.api.helper;
 
 import com.juaracoding.magang.api.BaseApiTest;
 import com.juaracoding.magang.utils.Constants;
+import com.juaracoding.magang.utils.SecurityUtil;
 import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
@@ -260,6 +261,186 @@ public final class AdminApiHelper {
         .then()
                 .extract()
                 .response();
+    }
+
+    /**
+     * Mengubah status aktif/non-aktif akun Karyawan oleh Admin via PATCH /users/{id}
+     * (kebutuhan E2E SIT_USR_UI_130–131).
+     *
+     * @param userId   ID user target
+     * @param isActive true untuk mengaktifkan, false untuk menonaktifkan
+     * @return true jika HTTP 200/201
+     */
+    public static boolean updateUserActiveStatusAsAdmin(String userId, boolean isActive) {
+        if (userId == null || userId.isBlank()) {
+            logger.warn("Cannot update active status for blank userId");
+            return false;
+        }
+        ApiSession admin = loginAsHybridAdmin();
+        Map<String, Object> body = new HashMap<>();
+        body.put("is_active", isActive);
+        body.put("status", isActive ? "ACTIVE" : "INACTIVE");
+
+        Response res = given()
+                .spec(authSpec(admin.token()))
+                .body(body)
+        .when()
+                .patch(Constants.API_USERS_ENDPOINT + "/" + userId)
+        .then()
+                .extract()
+                .response();
+
+        logger.info("Hybrid Admin PATCH /users/{} (is_active={}) -> HTTP {}", userId, isActive, res.getStatusCode());
+        return res.getStatusCode() == 200 || res.getStatusCode() == 201;
+    }
+
+    /**
+     * Membatalkan pengajuan cuti Karyawan oleh Admin pada /project-leave/{id}
+     * (kebutuhan E2E SIT_USR_UI_134). Mencoba PATCH status CANCELLED/REJECTED terlebih dahulu,
+     * lalu fallback DELETE jika endpoint cancel menggunakan penghapusan record.
+     *
+     * @param leaveId ID pengajuan cuti pada /project-leave
+     * @return true jika pembatalan berhasil (HTTP 200/201/204)
+     */
+    public static boolean cancelLeaveAsAdmin(String leaveId) {
+        if (leaveId == null || leaveId.isBlank()) {
+            logger.warn("Cannot cancel blank leaveId");
+            return false;
+        }
+        ApiSession admin = loginAsHybridAdmin();
+        Map<String, Object> body = new HashMap<>();
+        body.put("status", "CANCELLED");
+        body.put("is_cancel", true);
+        body.put("is_approve", false);
+
+        Response patchRes = given()
+                .spec(authSpec(admin.token()))
+                .body(body)
+        .when()
+                .patch(Constants.API_PROJECT_LEAVE_ENDPOINT + "/" + leaveId)
+        .then()
+                .extract()
+                .response();
+
+        logger.info("Hybrid Admin PATCH /project-leave/{} (cancel) -> HTTP {}", leaveId, patchRes.getStatusCode());
+        if (patchRes.getStatusCode() == 200 || patchRes.getStatusCode() == 201) {
+            return true;
+        }
+
+        Response deleteRes = given()
+                .spec(authSpec(admin.token()))
+        .when()
+                .delete(Constants.API_PROJECT_LEAVE_ENDPOINT + "/" + leaveId)
+        .then()
+                .extract()
+                .response();
+
+        logger.info("Hybrid Admin DELETE /project-leave/{} (cancel fallback) -> HTTP {}", leaveId, deleteRes.getStatusCode());
+        return deleteRes.getStatusCode() == 200 || deleteRes.getStatusCode() == 204;
+    }
+
+    /**
+     * Mengambil daftar titik Absen Point aktif dari Admin via GET /location-point
+     * (kebutuhan E2E SIT_USR_UI_135).
+     *
+     * @return Response JSON /location-point
+     */
+    public static Response getActiveLocationPointsAsAdmin() {
+        ApiSession admin = loginAsHybridAdmin();
+        Response res = given()
+                .spec(authSpec(admin.token()))
+        .when()
+                .get(Constants.API_LOCATIONS_ENDPOINT)
+        .then()
+                .extract()
+                .response();
+
+        logger.info("Hybrid Admin GET /location-point -> HTTP {}", res.getStatusCode());
+        return res;
+    }
+
+    /**
+     * Mengambil pasangan koordinat [latitude, longitude] titik Absen Point aktif pertama
+     * dari GET /location-point (fallback ke DEFAULT_OFFICE_LAT/LON jika tidak ditemukan).
+     *
+     * @return array double[2] berisi {latitude, longitude}
+     */
+    public static double[] getFirstActiveLocationCoordinates() {
+        try {
+            Response res = getActiveLocationPointsAsAdmin();
+            if (res.getStatusCode() == 200) {
+                Double lat = res.jsonPath().getDouble("data[0].latitude");
+                Double lon = res.jsonPath().getDouble("data[0].longitude");
+                if (lat != null && lon != null) {
+                    return new double[]{lat, lon};
+                }
+            }
+        } catch (Exception e) {
+            logger.warn("Failed to parse /location-point coordinates, using default office GPS: {}", e.getMessage());
+        }
+        return new double[]{Constants.DEFAULT_OFFICE_LAT, Constants.DEFAULT_OFFICE_LON};
+    }
+
+    /**
+     * Membuat user baru oleh Admin dengan kuota Jumlah Cuti (leave_amount) via POST /users
+     * menggunakan password ter-encode Base64 (kebutuhan E2E SIT_USR_UI_140 [Known Defect]).
+     *
+     * @param nik             NIK karyawan baru
+     * @param fullname        nama lengkap
+     * @param email           email user baru
+     * @param encodedPassword password ter-encode Base64 (akan didecode via SecurityUtil)
+     * @param leaveAmount     kuota cuti awal (misal 12)
+     * @return Response POST /users
+     */
+    public static Response createUserWithLeaveAmountAsAdmin(
+            String nik,
+            String fullname,
+            String email,
+            String encodedPassword,
+            int leaveAmount
+    ) {
+        ApiSession admin = loginAsHybridAdmin();
+        Map<String, Object> body = new HashMap<>();
+        body.put("nik", nik);
+        body.put("fullname", fullname);
+        body.put("email", email);
+        body.put("password", SecurityUtil.decode(encodedPassword));
+        body.put("leave_amount", leaveAmount);
+        body.put("is_active", true);
+
+        Response res = given()
+                .spec(authSpec(admin.token()))
+                .body(body)
+        .when()
+                .post(Constants.API_USERS_ENDPOINT)
+        .then()
+                .extract()
+                .response();
+
+        logger.info("Hybrid Admin POST /users (leave_amount={}) -> HTTP {}", leaveAmount, res.getStatusCode());
+        return res;
+    }
+
+    /**
+     * Menginspeksi data kuota/riwayat project-leave milik user tertentu oleh Admin
+     * via GET /project-leave?user_id={userId} (kebutuhan E2E SIT_USR_UI_140 [Known Defect]).
+     *
+     * @param userId ID user yang diperiksa
+     * @return Response GET /project-leave
+     */
+    public static Response queryProjectLeaveByUserAsAdmin(String userId) {
+        ApiSession admin = loginAsHybridAdmin();
+        Response res = given()
+                .spec(authSpec(admin.token()))
+                .queryParam("user_id", userId)
+        .when()
+                .get(Constants.API_PROJECT_LEAVE_ENDPOINT)
+        .then()
+                .extract()
+                .response();
+
+        logger.info("Hybrid Admin GET /project-leave?user_id={} -> HTTP {}", userId, res.getStatusCode());
+        return res;
     }
 
     /**

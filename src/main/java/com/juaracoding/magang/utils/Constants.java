@@ -17,25 +17,29 @@ public final class Constants {
     public static final String USER_LOGIN_URL = BASE_URL + "/absen/login";
     public static final String USER_REGISTER_URL = BASE_URL + "/absen/register";
     public static final String USER_FORGOT_PASSWORD_URL = BASE_URL + "/absen/forgot-password";
+    public static final String USER_RESET_PASSWORD_REQUEST_URL = BASE_URL + "/absen/reset-password-request";
+    public static final String USER_RESET_PASSWORD_URL = BASE_URL + "/absen/reset-password";
     public static final String USER_HOME_URL = BASE_URL + "/apps/absent";
     public static final String USER_ACTIVITY_URL = BASE_URL + "/apps/absent/activity";
     public static final String USER_CORRECTION_URL = BASE_URL + "/apps/absent/correction";
     public static final String USER_PERMIT_URL = BASE_URL + "/apps/absent/permit";
     public static final String USER_OVERTIME_URL = BASE_URL + "/apps/absent/overtime";
+    public static final String USER_OVERTIME_CLIENT_URL = BASE_URL + "/apps/absent/overtime-client";
     public static final String USER_LEAVE_URL = BASE_URL + "/apps/absent/leave";
+    public static final String USER_LEAVE_CLIENT_URL = BASE_URL + "/apps/absent/leave-client";
     public static final String USER_SICK_URL = BASE_URL + "/apps/absent/sick";
     public static final String USER_CHANGE_PASSWORD_URL = BASE_URL + "/apps/absent/change-password";
+    public static final String USER_DOWNLOAD_REPORT_URL = BASE_URL + "/apps/absent/reports/share_report";
 
     // ==========================================
     // REAL BACKEND API URI & ENDPOINTS (FEATHERSJS)
     // ==========================================
     public static final String API_BASE_URI = "https://api-dev.dikahadir.com/hadir-api-magang";
     public static final String API_AUTH_ENDPOINT = "/authentication";
+    public static final String API_AUTH_MANAGEMENT_ENDPOINT = "/auth-management";
     public static final String API_USERS_ENDPOINT = "/users";
-    public static final String API_REGISTER_ENDPOINT = "/users/register";
-    public static final String API_FORGOT_PASSWORD_ENDPOINT = "/users/forgot-password";
-    public static final String API_RESET_PASSWORD_ENDPOINT = "/users/reset-password";
     public static final String API_ACTIVITY_ENDPOINT = "/activity";
+    public static final String API_CLOCK_OUT_ENDPOINT = "/activity/request-activity";
     public static final String API_CORRECTIONS_ENDPOINT = "/activity-correction";
     public static final String API_OVERTIME_ENDPOINT = "/overtime";
     public static final String API_OFF_PERMIT_ENDPOINT = "/off-permit";
@@ -44,6 +48,9 @@ public final class Constants {
     public static final String API_BUSINESS_TRIPS_ENDPOINT = "/business-trips";
     public static final String API_PROJECT_LEAVE_ENDPOINT = "/project-leave";
     public static final String API_SICK_ENDPOINT = "/sick";
+    public static final String API_SHARE_REPORT_ENDPOINT = "/share-report";
+    public static final String API_UPLOAD_ENDPOINT = "/upload";
+    public static final String API_LOCATIONS_ENDPOINT = "/location-point";
 
     // ==========================================
     // CREDENTIALS (BASE64 ENCODED - NO PLAINTEXT)
