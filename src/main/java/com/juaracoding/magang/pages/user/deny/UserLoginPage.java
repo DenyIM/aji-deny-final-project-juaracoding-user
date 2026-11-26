@@ -42,6 +42,9 @@ public class UserLoginPage extends BasePage {
     @FindBy(xpath = "//p[contains(normalize-space(),'Belum punya akun')]/following-sibling::button[normalize-space()='disini']")
     private WebElement registerHereButton;
 
+    @FindBy(xpath = "//button[normalize-space()='Lupa password ?']")
+    private WebElement forgotPasswordButton;
+
     public UserLoginPage(WebDriver driver) {
         super(driver);
     }
@@ -88,6 +91,11 @@ public class UserLoginPage extends BasePage {
     public void clickRegisterLink() {
         click(registerHereButton);
         logger.info("Clicked 'disini' button to navigate to Register page.");
+    }
+
+    public void clickForgotPasswordLink() {
+        click(forgotPasswordButton);
+        logger.info("Clicked 'Lupa password ?' button to navigate to Reset Password Request page.");
     }
 
     public void login(String email, String plainPassword) {
