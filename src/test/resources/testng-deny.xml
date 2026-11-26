@@ -18,6 +18,7 @@
     <test name="Tester Deny - Karyawan Web UI (84 TCs)">
         <classes>
             <class name="com.juaracoding.magang.tests.user.deny.UserLoginTest" />
+            <class name="com.juaracoding.magang.tests.user.deny.RegisterTest" />
         </classes>
     </test>
 

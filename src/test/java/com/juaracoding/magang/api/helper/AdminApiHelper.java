@@ -447,6 +447,20 @@ public final class AdminApiHelper {
      * @return userId jika ditemukan, selain itu null
      */
     public static String findUserIdByEmail(String email) {
+        return findUserFieldByEmail(email, "data.id");
+    }
+
+    /**
+     * Mengambil path/ID foto profil user berdasarkan email melalui Admin API GET /users?email=...
+     *
+     * @param email alamat email user
+     * @return nilai field photo jika ditemukan, selain itu null
+     */
+    public static String findUserPhotoByEmail(String email) {
+        return findUserFieldByEmail(email, "data.photo");
+    }
+
+    private static String findUserFieldByEmail(String email, String jsonPath) {
         if (email == null || email.isBlank()) {
             return null;
         }
@@ -459,8 +473,66 @@ public final class AdminApiHelper {
         .then()
                 .extract()
                 .response();
-        List<String> ids = res.jsonPath().getList("data.id");
-        return (ids != null && !ids.isEmpty()) ? ids.get(0) : null;
+        List<Object> values = res.jsonPath().getList(jsonPath);
+        if (values == null || values.isEmpty() || values.get(0) == null) {
+            return null;
+        }
+        return String.valueOf(values.get(0));
+    }
+
+    /**
+     * Memeriksa status HTTP dari file upload pada static host /uploads.
+     *
+     * @param photoPath nilai field photo (ID, path relatif, atau URL penuh)
+     * @return HTTP status code atau -1 jika path kosong/gagal
+     */
+    public static int checkStaticUploadStatus(String photoPath) {
+        if (photoPath == null || photoPath.isBlank()) {
+            return -1;
+        }
+        String trimmed = photoPath.trim();
+        String targetUrl;
+        if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+            targetUrl = trimmed;
+        } else if (trimmed.startsWith("/uploads/")) {
+            targetUrl = "https://api-dev.dikahadir.com" + trimmed;
+        } else {
+            String normalized = trimmed.startsWith("/") ? trimmed.substring(1) : trimmed;
+            targetUrl = Constants.API_STATIC_UPLOADS_BASE_URI + "/" + normalized;
+        }
+        try {
+            Response res = given()
+                    .relaxedHTTPSValidation()
+            .when()
+                    .get(targetUrl)
+            .then()
+                    .extract()
+                    .response();
+            logger.info("Static upload check GET {} -> HTTP {}", targetUrl, res.getStatusCode());
+            return res.getStatusCode();
+        } catch (Exception e) {
+            logger.warn("Static upload check failed for [{}]: {}", targetUrl, e.getMessage());
+            return -1;
+        }
+    }
+
+    /**
+     * Menghapus akun uji berdasarkan email secara aman di tahap @AfterMethod.
+     *
+     * @param email alamat email akun uji yang akan dihapus
+     */
+    public static void cleanupUserByEmailQuietly(String email) {
+        if (email == null || email.isBlank()) {
+            return;
+        }
+        try {
+            String userId = findUserIdByEmail(email);
+            if (userId != null && !userId.isBlank()) {
+                cleanupRecordQuietly(Constants.API_USERS_ENDPOINT, userId);
+            }
+        } catch (Exception e) {
+            logger.warn("Cleanup user by email skipped for [{}]: {}", email, e.getMessage());
+        }
     }
 
     /**

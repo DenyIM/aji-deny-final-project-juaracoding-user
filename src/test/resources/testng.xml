@@ -23,6 +23,7 @@
     <test name="Karyawan Web UI - Autentikasi &amp; Modul Aktif">
         <classes>
             <class name="com.juaracoding.magang.tests.user.deny.UserLoginTest" />
+            <class name="com.juaracoding.magang.tests.user.deny.RegisterTest" />
         </classes>
     </test>
 
