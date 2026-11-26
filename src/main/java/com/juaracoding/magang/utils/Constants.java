@@ -22,12 +22,16 @@ public final class Constants {
     public static final String USER_HOME_URL = BASE_URL + "/apps/absent";
     public static final String USER_ACTIVITY_URL = BASE_URL + "/apps/absent/activity";
     public static final String USER_CORRECTION_URL = BASE_URL + "/apps/absent/correction";
+    public static final String USER_CORRECTION_DETAIL_URL_PREFIX = BASE_URL + "/apps/absent/correction/";
     public static final String USER_PERMIT_URL = BASE_URL + "/apps/absent/permit";
     public static final String USER_OVERTIME_URL = BASE_URL + "/apps/absent/overtime";
     public static final String USER_OVERTIME_CLIENT_URL = BASE_URL + "/apps/absent/overtime-client";
+    public static final String USER_OVERTIME_DETAIL_URL_PREFIX = BASE_URL + "/apps/absent/overtime/";
     public static final String USER_LEAVE_URL = BASE_URL + "/apps/absent/leave";
     public static final String USER_LEAVE_CLIENT_URL = BASE_URL + "/apps/absent/leave-client";
+    public static final String USER_LEAVE_DETAIL_URL_PREFIX = BASE_URL + "/apps/absent/leave/";
     public static final String USER_SICK_URL = BASE_URL + "/apps/absent/sick";
+    public static final String USER_STAFF_URL = BASE_URL + "/apps/absent/staff";
     public static final String USER_CHANGE_PASSWORD_URL = BASE_URL + "/apps/absent/change-password";
     public static final String USER_DOWNLOAD_REPORT_URL = BASE_URL + "/apps/absent/reports/share_report";
 
@@ -61,6 +65,16 @@ public final class Constants {
     // ==========================================
     public static final String BFF_SESSION_COOKIE_NAME = "hadir_app_magang";
     public static final String BFF_LOGIN_ENDPOINT = "/api/login";
+    public static final String BFF_USER_SUMMARY_ENDPOINT = "/api/users/summary";
+    public static final String BFF_USER_LAST_ACTIVITY_ENDPOINT = "/api/activity/user-last-activity";
+    public static final String BFF_USER_CHECK_CORRECTION_ENDPOINT = "/api/activity/user-check-correction";
+    public static final String BFF_USERS_ENDPOINT = "/api/users";
+    public static final String BFF_CORRECTIONS_ENDPOINT = "/api/activity-correction";
+    public static final String BFF_OFF_PERMIT_ENDPOINT = "/api/off-permit";
+    public static final String BFF_LATE_PERMIT_ENDPOINT = "/api/permit/late-permit";
+    public static final String BFF_EARLY_LEAVE_ENDPOINT = "/api/permit/early-permit";
+    public static final String BFF_LEAVE_ENDPOINT = "/api/leave";
+    public static final String BFF_OVERTIME_ENDPOINT = "/api/overtime";
     public static final String BFF_SICK_ENDPOINT = "/api/sick";
     public static final String BFF_ACTIVITY_SICK_ENDPOINT = "/api/activity/sick";
     public static final String BFF_PROJECT_LEAVE_ENDPOINT = "/api/leave/project-leave";
@@ -73,14 +87,14 @@ public final class Constants {
     // ==========================================
     public static final String USER_EMAIL = "hadirsqa1@gmail.com";
     public static final String USER_NAME = "Hadir SQA Testing 1";
-    public static final String USER_NIK = "D6201031";
+    public static final String USER_NIK = "D8240010";
     public static final String USER_PASSWORD_ENCODED = "U1FBQEhhZGlyMTIzNDU=";
 
     // Kredensial Admin khusus untuk Hybrid @Before/@After API Approval & Seeding
     public static final String HYBRID_ADMIN_EMAIL = "admin@hadir.com";
     public static final String HYBRID_ADMIN_PASSWORD_ENCODED = "TWFnYW5nU1FBX0pDQDEyMw==";
 
-    // Pool 35 NIK master DIKA terverifikasi (selaras dengan EmployeeApiHelper di proyek Admin)
+    // Pool 34 NIK master DIKA terverifikasi yang belum terpakai akun aktif hadirsqa1@gmail.com (D8240010)
     public static final String[] VALID_NIK_POOL = {
         "D7231978", "D7231983", "D7231984", "D7231985", "D7232001",
         "D7232029", "D6230561", "D8230009", "D8230013", "D8230014",
@@ -88,7 +102,7 @@ public final class Constants {
         "D7240022", "D7240021", "D7240020", "D7240019", "D8240007",
         "D6240003", "D7240018", "D9240001", "D7240017", "D7240016",
         "D7240015", "D7240014", "D6240002", "D7240013", "D7240012",
-        "F1240001", "D6240005", "D7240031", "D8240010", "D7240029"
+        "F1240001", "D6240005", "D7240031", "D7240029"
     };
 
     // Koordinat GPS default area kantor & luar radius (untuk simulasi CDP)

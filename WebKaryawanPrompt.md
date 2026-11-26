@@ -9,7 +9,7 @@
 | Informasi | Nilai / Spesifikasi |
 | :--- | :--- |
 | **Aplikasi Target (SUT)** | [HADIR Mobile Mirroring](https://magang.dikahadir.com/absen/login) |
-| **Domain Pengujian** | Portal **Karyawan / User Magang** (Modul Fitur Mobile + InfiniteScroll + E2E Lintas Modul, **250 Test Cases**: **140 Web UI** + **110 REST Assured API**) |
+| **Domain Pengujian** | Portal **Karyawan / User Magang** (Modul Fitur Mobile + Kehadiranmu + Leader/Staff + InfiniteScroll + E2E Lintas Modul, **276 Test Cases**: **160 Web UI** + **116 REST Assured API**) |
 | **Bahasa Pemrograman** | **Java 21 LTS** |
 | **Web UI Automation** | **Selenium WebDriver `4.52.0`** (Chrome default **`headless = true`**, W3C Standard, Selenium Manager) |
 | **API & Hybrid Engine** | **REST Assured `6.3.0`** (`rest-assured`, `json-path`, `json-schema-validator`) |
@@ -26,9 +26,9 @@
 
 | Peran Akun | Email / NIK | Konstanta Base64 di `Constants.java` | Penggunaan |
 | :--- | :--- | :--- | :--- |
-| **Karyawan Utama** | `hadirsqa1@gmail.com` (NIK: `D6201031`, Nama: `Hadir SQA Testing 1`) | `USER_PASSWORD_ENCODED = "U1FBQEhhZGlyMTIzNDU="` | Login UI `/absen/login` & API User Token |
+| **Karyawan Utama** | `hadirsqa1@gmail.com` (NIK: `D8240010`, Nama: `Hadir SQA Testing 1`, Role: Leader/Supervisor) | `USER_PASSWORD_ENCODED = "U1FBQEhhZGlyMTIzNDU="` | Login UI `/absen/login`, API User Token, & Pengujian Fitur Karyawan |
 | **Admin (Hybrid Seeder)** | `admin@hadir.com` | `HYBRID_ADMIN_PASSWORD_ENCODED = "TWFnYW5nU1FBX0pDQDEyMw=="` | **Khusus tahap `@Before` / `@After` Hybrid API+UI** (misal Admin menyetujui/menolak pengajuan lewat API agar User UI dapat memverifikasi badge `Approved`/`Rejected` beserta alasan penolakan) |
-| **Pool NIK Registrasi** | `F1240001`, `D6240005`, `D7240031`, `D8240010`, `D7240029`, `D7240028`, `D7240027`, `D6240004` | Array `VALID_NIK_POOL` di `Constants.java` | Pengujian registrasi mandiri `/absen/register` |
+| **Pool NIK Registrasi** | `D7231978`, ..., `F1240001`, `D6240005`, `D7240031`, `D7240029` | Array `VALID_NIK_POOL` di `Constants.java` (34 NIK belum terdaftar, mengecualikan `D8240010`) | Pengujian registrasi mandiri `/absen/register` |
 
 ---
 
@@ -44,8 +44,8 @@
 | Modul | HTTP Method & Path | Catatan Penggunaan (API Test & Hybrid) |
 | :--- | :--- | :--- |
 | **Autentikasi** | `POST /authentication` | Payload JSON: `{"email": "...", "password": "...", "strategy": "local"}` → Ambil `accessToken` & `user.id` |
-| **Profil & User** | `GET /users`, `PATCH /users/{id}` | Filter `nik=D6201031` atau `email=hadirsqa1@gmail.com`; update profil/password |
-| **Aktivitas & Presensi** | `GET /activity` | Riwayat presensi & log aktivitas harian |
+| **Profil & User** | `GET /users`, `PATCH /users/{id}`, `GET /users?upliner_id={id}` | Filter `nik=D8240010` atau `email=hadirsqa1@gmail.com`; update profil/password; ambil daftar staff bawahan Leader |
+| **Aktivitas & Presensi** | `GET /activity`, `GET /user-summary` | Riwayat presensi (`created_at[$gte]`/`[$lte]`) & statistik ringkasan `Kehadiranmu` |
 | **Koreksi Absen** | `GET /activity-correction`, `POST /activity-correction`, `PATCH /activity-correction/{id}` | Employee submit koreksi (`date_in`, `date_out`, `time_zone`, `is_wfh`); Admin approve/reject via `PATCH` |
 | **Izin Off** | `GET /off-permit`, `POST /off-permit`, `PATCH /off-permit/{id}` | Employee submit (`date_off`, `reason`); Admin approve/reject via `PATCH` |
 | **Izin Terlambat & Pulang Cepat** | `GET /late-permit`, `GET /early-leave` | Cek riwayat izin terlambat dan pulang cepat |
@@ -55,11 +55,15 @@
 | **Reset & Upload** | `POST /auth-management`, `POST /upload` | Reset password via `/auth-management` (`sendResetPassword` / `resetPwd`) + OTP di UI; upload foto/file bukti |
 
 > [!NOTE]
-> **Pembaruan Akurasi Rute & Form Web Karyawan (Live Discovery)**:
-> - **Reset Password (`/absen/forgot-password`)**: Alur menyertakan input **kode OTP**, password baru, dan konfirmasi password.
-> - **Ubah Password (`/apps/absent/change-password`)**: Form hanya memiliki field **Password Baru** (`password`) dan **Confirm Password** (`passwordConfirmation`) beserta ikon mata Show/Hide — **tidak ada** field `Password Lama`.
-> - **Download Reports (`/apps/absent/reports/share_report`)**: Halaman tersedia di beranda Karyawan untuk export report Mingguan/Bulanan (**4 TCs baru** `SIT_USR_UI_126–129` untuk Tester Deny).
-> - **Rute Alias Client**: Portal juga mendukung rute `/apps/absent/leave-client` dan `/apps/absent/overtime-client` sebagai varian tampilan cuti/lembur sisi client.
+> **Pembaruan Akurasi Rute & Form Web Karyawan (Live Discovery SIT v5)**:
+> - **Register (`/absen/register`)**: Form langsung menampilkan 5 field aktif (`#nik`, `#fullname`, `#email`, `#password` + ikon mata Show/Hide, Upload Selfie `#selfie`) beserta tombol `Daftar` — tidak ada langkah terpisah `Cek NIK` atau auto-fill divisi sebelum submit.
+> - **Reset Password (`/absen/reset-password-request` & `/absen/reset-password`)**: Alur menyertakan request email, input **kode OTP**, Password Baru, Konfirmasi Password (2 ikon mata), dan tautan kembali ke Login.
+> - **Beranda, Kehadiranmu & Lupa Pulang (`/apps/absent` & `/apps/absent/correction/[id]`)**: Beranda memiliki filter **Bulan & Tahun** pada seksi `Kehadiranmu` (7 kartu metrik ringkasan), serta penanganan dialog **"Anda belum melakukan absen keluar"** menuju halaman `/apps/absent/correction/[id]`.
+> - **Ubah Password (`/apps/absent/change-password`)**: Form hanya memiliki field **Password Baru** (`password`) dan **Confirm Password** (`passwordConfirmation`) beserta 2 ikon mata Show/Hide serta modal konfirmasi **`Sukses mengganti password`** (`Oke`) — **tidak ada** field `Password Lama`.
+> - **Download Reports (`/apps/absent/reports/share_report`)**: Halaman tersedia di beranda Karyawan untuk export report **Harian, Mingguan, dan Bulanan** (**6 TCs** `SIT_USR_UI_136–141` untuk Tester Deny).
+> - **Leader / Staff & Approval Bawahan (`/apps/absent/staff`, `/apps/absent/leave/[id]`, `/apps/absent/overtime/[id]`)**: Karyawan dengan bawahan (`upliner`) dapat memantau menu **Staff** (Lihat Absen, Sisa Cuti, Staff) serta Approve/Reject pengajuan bawahan (**8 TCs** `SIT_USR_UI_142–149` untuk Tester Aji).
+> - **Rute Alias Client**: Portal juga mendukung rute `/apps/absent/leave-client` (beserta Tab `Info Cuti` 6 metrik) dan `/apps/absent/overtime-client` sebagai varian tampilan cuti/lembur sisi client.
+> - **Next.js BFF Routes (`/api/*` di `BASE_URL`)**: Rute `/api/login`, `/api/users/summary`, `/api/activity/user-last-activity`, `/api/activity/user-check-correction`, `/api/sick`, `/api/activity/sick`, `/api/leave/project-leave`, `/api/client/*`, dan rute Leader `/api/leave/[id]` dicakup di `SIT_USR_API_068–071, 077, 097–099, 111–116`.
 
 ### Tools API yang Direkomendasikan
 - **Inspeksi Live**: **Chrome DevTools → Network Tab (Fetch/XHR)** (gunakan fitur *Copy as cURL* saat melakukan aksi di `/apps/absent/*` untuk melihat payload multipart/JSON terbaru, khususnya untuk endpoint upload foto atau pengajuan cuti).
@@ -115,7 +119,7 @@ final-project-karyawan/
 ├── plan.md
 ├── tasklist.md
 ├── docs/
-│   └── SIT_Scenario_Magang_Hadir.xlsx       # Single Source of Truth matriks SIT v4 (250 User TCs: 140 UI + 110 API + kolom Manual Check)
+│   └── SIT_Scenario_Magang_Hadir.xlsx       # Single Source of Truth matriks SIT v5 (276 User TCs: 160 UI + 116 API + kolom Manual Check)
 ├── reports/
 │   ├── ExtentReport.html
 │   └── screenshots/
@@ -127,7 +131,7 @@ final-project-karyawan/
     │   │   ├── BasePage.java                # Explicit wait 15s, click fallback JS, type, isDisplayed, scroll
     │   │   └── user/
     │   │       ├── deny/                    # UserLoginPage, RegisterPage, ResetPasswordPage, PermitPage, LeaveAndSickPage, DownloadReportPage
-    │   │       └── aji/                     # AttendancePage, ActivityHistoryPage, CorrectionPage, OvertimePage, UserProfilePage
+    │   │       └── aji/                     # AttendancePage, ActivityHistoryPage, CorrectionPage, OvertimePage, UserProfilePage, LeaderStaffPage
     │   ├── reports/
     │   │   ├── ExtentManager.java           # Dark Theme SparkReporter
     │   │   └── ExtentTestManager.java       # ThreadLocal logging
@@ -141,43 +145,43 @@ final-project-karyawan/
         │   ├── listeners/
         │   │   └── TestListener.java        # Auto-tag Tester Deny/Aji, UI/API, Base64 screenshot on failure
         │   ├── api/
-        │   │   ├── BaseApiTest.java         # REST Assured + useRelaxedHTTPSValidation() + /authentication
+        │   │   ├── BaseApiTest.java         # REST Assured + useRelaxedHTTPSValidation() + /authentication & /api/login
         │   │   ├── helper/
         │   │   │   └── AdminApiHelper.java  # Hybrid @Before Admin approval/seeding helper
         │   │   └── user/
         │   │       ├── UserGroupAApiTest.java # Tester Deny (55 API TCs)
-        │   │       └── UserGroupBApiTest.java # Tester Aji (55 API TCs)
+        │   │       └── UserGroupBApiTest.java # Tester Aji (61 API TCs)
         │   └── tests/user/
         │       ├── deny/                    # UserLoginTest, RegisterTest, ResetPasswordTest, PermitTest, LeaveAndSickTest, DownloadReportTest, UserCrossModuleDenyE2ETest
-        │       └── aji/                     # AttendanceTest, ActivityHistoryTest, CorrectionTest, OvertimeTest, UserProfileTest, UserCrossModuleAjiE2ETest
+        │       └── aji/                     # AttendanceTest, ActivityHistoryTest, CorrectionTest, OvertimeTest, UserProfileTest, LeaderStaffTest, UserCrossModuleAjiE2ETest
         └── resources/
-            ├── testng.xml                   # Master Suite Karyawan (250 TCs, headless=true)
-            ├── testng-deny.xml              # Suite khusus Tester Deny (127 TCs)
-            ├── testng-aji.xml               # Suite khusus Tester Aji (123 TCs)
+            ├── testng.xml                   # Master Suite Karyawan (276 TCs, headless=true)
+            ├── testng-deny.xml              # Suite khusus Tester Deny (139 TCs)
+            ├── testng-aji.xml               # Suite khusus Tester Aji (137 TCs)
             └── testdata/                    # Dummy selfie .jpg/.png, file >5MB, file non-image (.pdf/.mp3)
 ```
 
 ---
 
-## 7. Pembagian Tugas Adil 2 Tester di Proyek Karyawan (Total 250 TCs)
+## 7. Pembagian Tugas Adil 2 Tester di Proyek Karyawan (Total 276 TCs)
 
-Mengacu pada [docs/SIT_Scenario_Magang_Hadir.xlsx](file:///c:/Users/Asus/Documents/JuaraCoding/Final/final-project-admin/docs/SIT_Scenario_Magang_Hadir.xlsx) v4 (kontigu, atomik, memiliki kolom `Severity`, `Priority`, `Test Suite`, `Actual Result / Defect Notes`, dan `Manual Check`):
+Mengacu pada [docs/SIT_Scenario_Magang_Hadir.xlsx](file:///c:/Users/Asus/Documents/JuaraCoding/Final/final-project-admin/docs/SIT_Scenario_Magang_Hadir.xlsx) v5 (kontigu, atomik, memiliki kolom `Severity`, `Priority`, `Test Suite`, `Actual Result / Defect Notes`, dan `Manual Check`):
 
-| Tester | Modul Web UI (`140 TCs`) | Modul REST Assured API (`110 TCs`) | Total & Bobot |
+| Tester | Modul Web UI (`160 TCs`) | Modul REST Assured API (`116 TCs`) | Total & Bobot |
 | :--- | :--- | :--- | :---: |
-| **👤 Tester Deny** | **72 Web UI TCs**:<br>1. `Autentikasi-Login` (`SIT_USR_UI_001–012`: 12 TCs, *utuh*)<br>2. `Autentikasi-Register` (`SIT_USR_UI_013–025`: 13 TCs)<br>3. `Autentikasi-Reset Password` (`SIT_USR_UI_026–033`: 8 TCs, termasuk OTP)<br>4. `Pengajuan-Izin` (`SIT_USR_UI_076–086`: 11 TCs — *Hybrid* + *InfiniteScroll*)<br>5. `Pengajuan-Cuti & Sakit` (`SIT_USR_UI_099–117`: Cuti `099–107` [9] + Sakit `108–117` [10] = 19 TCs + *InfiniteScroll*)<br>6. `Profil-Download Report` (`SIT_USR_UI_126–129`: 4 TCs `/apps/absent/reports/share_report`)<br>7. `Integrasi Lintas Modul (Hybrid API+UI)` — Bagian Deny (`SIT_USR_UI_130–134`: 5 TCs) | **55 API TCs**:<br>1. User Auth & `/auth-management` Reset Password API (`SIT_USR_API_001–010`: 10 TCs)<br>2. Registration & NIK Check API (`SIT_USR_API_011–018`: 8 TCs)<br>3. Leaves/Izin/Sakit + Late/Early Permits API (`SIT_USR_API_044–049, 056–063`: 14 TCs)<br>4. Multipart Upload Security & Sick Docs (`SIT_USR_API_064–071`: 8 TCs)<br>5. Share Report Export API (`SIT_USR_API_072–075`: 4 TCs)<br>6. Project-Leave, Profile, IDOR & Mass-Assignment Security (`SIT_USR_API_053–055, 076–083`: 11 TCs) | **127 TCs** (50.8%) |
-| **👤 Tester Aji** | **68 Web UI TCs**:<br>1. `Presensi-Beranda` (`SIT_USR_UI_034–053`: 20 TCs)<br>2. `Presensi-Log Absen` (`SIT_USR_UI_054–064`: 11 TCs + *InfiniteScroll*)<br>3. `Pengajuan-Koreksi Absen` (`SIT_USR_UI_065–075`: 11 TCs — *Hybrid* + *InfiniteScroll*)<br>4. `Pengajuan-Lembur` (`SIT_USR_UI_087–098`: 12 TCs — *Hybrid* + *InfiniteScroll*)<br>5. `Profil-Menu Utama & Ubah Password` (`SIT_USR_UI_118–125`: 8 TCs — tanpa Password Lama)<br>6. `Integrasi Lintas Modul (Hybrid API+UI)` — Bagian Aji (`SIT_USR_UI_135–140`: 6 TCs, termasuk E2E Kuota Cuti Pendaftaran) | **55 API TCs**:<br>1. Attendance Clock-In/Out & Request-Activity/Summary (`SIT_USR_API_019–030, 090–096`: 19 TCs)<br>2. Activity Log & IDOR Security (`SIT_USR_API_031–038`: 8 TCs)<br>3. Corrections API (`SIT_USR_API_039–043`: 5 TCs)<br>4. Overtimes & Business Trips API (`SIT_USR_API_050–052, 084–089`: 9 TCs)<br>5. Leader/Client Isolation, Query Hardening & Self-Approval RBAC (`SIT_USR_API_097–110`: 14 TCs) | **123 TCs** (49.2%) |
+| **👤 Tester Deny** | **84 Web UI TCs**:<br>1. `Autentikasi-Login` (`SIT_USR_UI_001–012`: 12 TCs, *utuh*)<br>2. `Autentikasi-Register` (`SIT_USR_UI_013–025`: 13 TCs — form 5 field, ikon mata & Known Defect foto)<br>3. `Autentikasi-Reset Password` (`SIT_USR_UI_026–035`: 10 TCs, termasuk OTP, 2 ikon mata & link Login)<br>4. `Pengajuan-Izin` (`SIT_USR_UI_078–091`: 14 TCs — 3 tab, Total, Reset, Reject Notes, `< Kembali`, *InfiniteScroll*)<br>5. `Pengajuan-Cuti` (`SIT_USR_UI_103–115`: 13 TCs — Tab Info Cuti 6 metrik, Kalender Batal/Simpan, Reset, Dibatalkan)<br>6. `Pengajuan-Sakit` (`SIT_USR_UI_116–126`: 11 TCs — Upload ulang, Kalender Batal/Simpan, Reset, *InfiniteScroll*)<br>7. `Profil-Download Report` (`SIT_USR_UI_136–141`: 6 TCs — Harian, Mingguan, Bulanan, `< Kembali`)<br>8. `Integrasi Lintas Modul (Hybrid API+UI)` — Bagian Deny (`SIT_USR_UI_150–154`: 5 TCs) | **55 API TCs**:<br>1. User Auth & `/auth-management` Reset Password API (`SIT_USR_API_001–010`: 10 TCs)<br>2. Registration & NIK Check API (`SIT_USR_API_011–018`: 8 TCs; NIK aktif `D8240010`)<br>3. Leaves/Izin/Sakit + Late/Early Permits API (`SIT_USR_API_044–049, 056–063`: 14 TCs)<br>4. Multipart Upload Security & Sick Docs (`SIT_USR_API_064–071`: 8 TCs)<br>5. Share Report Export API (`SIT_USR_API_072–075`: 4 TCs)<br>6. Project-Leave, Profile, IDOR & Mass-Assignment Security (`SIT_USR_API_053–055, 076–083`: 11 TCs) | **139 TCs** (50.4%) |
+| **👤 Tester Aji** | **76 Web UI TCs**:<br>1. `Presensi-Beranda & Lupa Pulang` (`SIT_USR_UI_036–058`: 23 TCs — Header, Kehadiranmu Bulan/Tahun + 7 kartu, Absen Masuk/Pulang, Dialog Lupa Pulang & `/correction/[id]`)<br>2. `Presensi-Log Absen` (`SIT_USR_UI_059–065`: 7 TCs + *InfiniteScroll*)<br>3. `Pengajuan-Koreksi Absen` (`SIT_USR_UI_066–077`: 12 TCs — Drawer, Reset, Lihat Selengkapnya, `< Kembali`, *InfiniteScroll*)<br>4. `Pengajuan-Lembur` (`SIT_USR_UI_092–102`: 11 TCs — `/overtime-client`, Reset, Total, Reject Notes, `< Kembali`, *InfiniteScroll*)<br>5. `Profil-Menu Utama & Ubah Password` (`SIT_USR_UI_127–135`: 9 TCs — Burger drawer `127`, 2 field + 2 ikon mata, modal Sukses, `< Kembali`)<br>6. `Leader-Staff & Approval Bawahan` (`SIT_USR_UI_142–149`: 8 TCs — `/apps/absent/staff`, `/leave/[id]`, `/overtime/[id]`)<br>7. `Integrasi Lintas Modul (Hybrid API+UI)` — Bagian Aji (`SIT_USR_UI_155–160`: 6 TCs, termasuk E2E Kuota Cuti Pendaftaran) | **61 API TCs**:<br>1. Attendance Clock-In/Out & Request-Activity/Summary (`SIT_USR_API_019–030, 090–096`: 19 TCs)<br>2. Activity Log (`created_at[$gte]`/`[$lte]`) & IDOR Security (`SIT_USR_API_031–038`: 8 TCs)<br>3. Corrections API (`SIT_USR_API_039–043`: 5 TCs)<br>4. Overtimes & Business Trips API (`SIT_USR_API_050–052, 084–089`: 9 TCs)<br>5. Leader/Client Isolation, Query Hardening, Self-Approval RBAC & Next.js BFF Summary/Last-Activity/Check-Correction/Staff (`SIT_USR_API_097–116`: 20 TCs) | **137 TCs** (49.6%) |
 
 ---
 
 ## 8. Catatan Perilaku Aplikasi & Penanganan Known Defect (`Actual Result / Defect Notes`)
 
-Pada SIT v3, perilaku bug pada SUT **tidak lagi ditulis di kolom `Expected Result`**. Kolom `Expected Result` kini berisi perilaku standar aplikasi yang seharusnya, sedangkan perilaku bug live dicatat di kolom **`Actual Result / Defect Notes`** dengan **`Status = Ready (Known Defect)`**:
-1. **Broken Image setelah Submit/Upload**: Pada Registrasi, Absen Masuk/Pulang, Log Absen, Lampiran Lembur, dan Surat Sakit, sistem seharusnya menampilkan gambar terunggah utuh, namun di live sering mengalami *broken image* (`naturalWidth == 0` / HTTP 404).
-2. **Tidak Ada Batas Maksimal Pengajuan Cuti (`SIT_USR_UI_104` & `SIT_USR_API_047`)**: Sistem seharusnya menolak pengajuan cuti yang melebihi sisa kuota tahunan, namun di live masih lolos tanpa validasi batas kuota.
-3. **Kuota `Jumlah Cuti` Pendaftaran User Tidak Sinkron (`SIT_USR_UI_140`)**: `leave_amount` yang diisikan Admin saat pendaftaran user terlihat di form Edit User (`/management/user-v2/edit/[id]`), namun tidak masuk ke data kuota aktif `project-leave` sehingga Karyawan gagal mengajukan cuti di `/apps/absent/leave`.
-4. **Pagination List Mobile (`InfiniteScroll`)**: Berbeda dengan Admin yang memakai MUI `TablePagination` (`5/10/25`, `Next/Prev/First/Last`), 6 halaman daftar riwayat Karyawan (`Log Absen`, `Koreksi Absen`, `Izin`, `Lembur`, `Cuti`, `Sakit`) memakai mekanisme scroll bawah (`$skip = 10 * page`) untuk memuat batch data berikutnya.
-5. Saat implementasi di `final-project-karyawan` (**Java 21 + Selenium `4.52.0` + REST Assured `6.3.0` + TestNG `7.12.0`**), gunakan assertion terhadap **Expected Result** standar dan tandai kegagalan bug aktual tersebut sebagai **Known Defect** (misalnya catat ke `ExtentTestManager`) sambil mempertahankan kolom `Severity` (`Critical/High/Medium/Low`) dan `Priority` (`P1/P2/P3`).
+Pada SIT v5, perilaku bug pada SUT **tidak lagi ditulis di kolom `Expected Result`**. Kolom `Expected Result` kini berisi perilaku standar aplikasi yang seharusnya, sedangkan perilaku bug live dicatat di kolom **`Actual Result / Defect Notes`** dengan **`Status = Ready (Known Defect)`** (**7 TCs** pada portal User: `6 UI + 1 API`):
+1. **Broken Image setelah Submit/Upload**: Pada Registrasi (`SIT_USR_UI_024`), Avatar & Foto Presensi Beranda (`SIT_USR_UI_046`), Foto Check-In Log Absen (`SIT_USR_UI_061`), dan Bukti Surat Sakit (`SIT_USR_UI_120`), sistem seharusnya menampilkan gambar terunggah utuh, namun di live mengalami *broken image* (`naturalWidth == 0` / HTTP 404).
+2. **Tidak Ada Batas Maksimal Pengajuan Cuti (`SIT_USR_UI_109` & `SIT_USR_API_047`)**: Sistem seharusnya menolak pengajuan cuti yang melebihi sisa kuota tahunan, namun di live masih lolos tanpa validasi batas kuota.
+3. **Kuota `Jumlah Cuti` Pendaftaran User Tidak Sinkron (`SIT_USR_UI_160`)**: `leave_amount` yang diisikan Admin saat pendaftaran user terlihat di form Edit User (`/management/user-v2/edit/[id]`), namun tidak masuk ke data kuota aktif `project-leave` sehingga Karyawan gagal mengajukan cuti di `/apps/absent/leave-client`.
+4. **Pagination List Mobile (`InfiniteScroll`)**: Berbeda dengan Admin yang memakai MUI `TablePagination` (`5/10/25`, `Next/Prev/First/Last`), 6 halaman daftar riwayat Karyawan (`Log Absen`, `Koreksi Absen`, `Izin`, `Lembur`, `Cuti`, `Sakit`) memakai mekanisme scroll bawah (`$skip = 10 * page`) untuk memuat batch data berikutnya (plus pagination daftar Staff Leader pada `/apps/absent/staff`).
+5. Saat implementasi di `final-project-karyawan` (**Java 21 + Selenium `4.52.0` + REST Assured `6.3.0` + TestNG `7.12.0`**), gunakan assertion terhadap **Expected Result** standar dan tandai kegagalan bug aktual tersebut sebagai **Known Defect** (misalnya catat ke `ExtentTestManager` dengan prefix `"[KNOWN DEFECT] ..."`) sambil mempertahankan kolom `Severity` (`Critical/High/Medium/Low`) dan `Priority` (`P1/P2/P3`).
 
 ---
 
@@ -186,7 +190,7 @@ Pada SIT v3, perilaku bug pada SUT **tidak lagi ditulis di kolom `Expected Resul
 1. Kerjakan Fase 2–3 (Core Foundation) di branch `main` terlebih dahulu.
 2. Untuk Fase 4–5 (POM + Test Class), **selalu buat branch baru dari `main`**:
    - Deny: `feature/deny-user-login`, `feature/deny-user-register`, `feature/deny-user-reset-password`, `feature/deny-user-permit`, `feature/deny-user-leave-sick`, `feature/deny-user-download-report`, `feature/deny-user-e2e`, `feature/deny-user-api-a`
-   - Aji: `feature/aji-user-attendance`, `feature/aji-user-activity`, `feature/aji-user-correction`, `feature/aji-user-overtime`, `feature/aji-user-profile`, `feature/aji-user-e2e`, `feature/aji-user-api-b`
+   - Aji: `feature/aji-user-attendance`, `feature/aji-user-activity`, `feature/aji-user-correction`, `feature/aji-user-overtime`, `feature/aji-user-profile`, `feature/aji-user-leader-staff`, `feature/aji-user-e2e`, `feature/aji-user-api-b`
 3. Dilarang mengubah file pondasi bersama (`BasePage`, `BaseTest`, `BaseApiTest`, `Constants`, `DriverFactory`, `testng*.xml`) di dalam branch fitur agar Pull Request ke `main` bebas konflik.
 4. Di dalam `TestListener.java`, deteksi kategori otomatis berdasarkan nama package: `.deny.` → `"Tester Deny"`, `.aji.` → `"Tester Aji"`, `.api.` → `"REST Assured API"`, `.tests.` → `"Selenium Web UI"`.
 
@@ -212,12 +216,12 @@ Ikuti seluruh spesifikasi berikut secara ketat:
 3. API & Hybrid API + UI:
    - Gunakan `API_BASE_URI = "https://api-dev.dikahadir.com/hadir-api-magang"` dengan `RestAssured.useRelaxedHTTPSValidation()` dan endpoint login `POST /authentication`.
    - Sediakan `AdminApiHelper.java` untuk pola Hybrid API + UI di tahap `@Before`: jika test UI Karyawan membutuhkan status Approved/Rejected dari Admin (misal verifikasi status dan alasan penolakan pada Izin, Koreksi, atau Lembur), lakukan seeding pengajuan + approval/rejection via REST Assured di `@Before`, lalu verifikasi tampilannya di UI Karyawan dengan Selenium.
-4. Pembagian Tugas 2 Tester Adil (Sesuai SIT v4 — 250 User TCs):
-   - Total 250 Test Cases User (140 Web UI + 110 REST Assured API, termasuk 4 TCs Download Report, 6 List InfiniteScroll, 11 TCs Integrasi Lintas Modul E2E, serta 55 API baru untuk Permits/Sick/Upload/Share-Report/Business-Trips/Leader Isolation/IDOR/RBAC) dibagi ke package terisolasi `deny` dan `aji`:
-     * Tester Deny (127 TCs = 72 UI + 55 API): package `pages.user.deny`, `tests.user.deny`, dan `UserGroupAApiTest` (Login `001–012` utuh, Register, Reset Password + OTP, Izin + InfiniteScroll, Cuti & Sakit + InfiniteScroll, Download Report `/apps/absent/reports/share_report`, E2E Lintas Modul Deny `130–134` + 55 API Group A).
-     * Tester Aji (123 TCs = 68 UI + 55 API): package `pages.user.aji`, `tests.user.aji`, dan `UserGroupBApiTest` (Presensi Beranda/Absen, Log Absen + InfiniteScroll, Koreksi + InfiniteScroll, Lembur + InfiniteScroll, Profil/Ubah Password tanpa Password Lama, E2E Lintas Modul Aji `135–140` + 55 API Group B).
+4. Pembagian Tugas 2 Tester Adil (Sesuai SIT v5 — 276 User TCs):
+   - Total 276 Test Cases User (160 Web UI + 116 REST Assured API, termasuk Kehadiranmu Bulan/Tahun, Dialog Lupa Pulang `/correction/[id]`, Leader/Staff `/apps/absent/staff` & Approval bawahan, Info Cuti, Download Report Harian/Mingguan/Bulanan, 6 List InfiniteScroll, 11 TCs Integrasi Lintas Modul E2E, serta BFF/Leader APIs `SIT_USR_API_111–116`) dibagi ke package terisolasi `deny` dan `aji`:
+     * Tester Deny (139 TCs = 84 UI + 55 API): package `pages.user.deny`, `tests.user.deny`, dan `UserGroupAApiTest` (Login `001–012` utuh, Register `013–025`, Reset Password + OTP `026–035`, Izin `078–091`, Cuti `103–115`, Sakit `116–126`, Download Report `136–141`, E2E Lintas Modul Deny `150–154` + 55 API Group A).
+     * Tester Aji (137 TCs = 76 UI + 61 API): package `pages.user.aji`, `tests.user.aji`, dan `UserGroupBApiTest` (Beranda & Lupa Pulang `036–058`, Log Absen `059–065`, Koreksi `066–077`, Lembur `092–102`, Profil/Ubah Password `127–135`, Leader-Staff & Approval `142–149`, E2E Lintas Modul Aji `155–160` + 61 API Group B).
    - Cantumkan ID Test Case (misal `SIT_USR_UI_001`) pada `@Test(description = "...")` dan `ExtentTestManager.logInfo(...)`.
-   - Sediakan 3 runner XML: `testng.xml` (250 TCs), `testng-deny.xml` (127 TCs), dan `testng-aji.xml` (123 TCs).
+   - Sediakan 3 runner utama: `testng.xml` (276 TCs), `testng-deny.xml` (139 TCs), dan `testng-aji.xml` (137 TCs), ditambah 4 category suites (`testng-smoke/regression/positive/negative.xml`).
 
 Langkah pertama: buat dulu `plan.md` dan `tasklist.md` (7 fase) untuk proyek Karyawan ini agar saya review sebelum implementasi kode dimulai!
 ```
