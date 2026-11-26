@@ -4,6 +4,7 @@ import com.juaracoding.magang.utils.Constants;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.Keys;
+import org.openqa.selenium.TimeoutException;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chromium.HasCdp;
@@ -15,14 +16,20 @@ import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
  * Kelas induk abstrak untuk seluruh Page Object Model (POM) Karyawan.
- * Menyediakan explicit wait wrappers, interaksi aman komponen React/MUI,
+ * Menyediakan explicit wait wrappers, interaksi aman komponen Next.js/MUI (SwipeableDrawer,
+ * Select mousedown, react-date-range, InfiniteScroll), pembersihan sesi storage/cookies,
  * pengecekan broken image, serta utilitas CDP untuk simulasi GPS & permission kamera/lokasi.
  */
 public abstract class BasePage {
+
+    private static final By MUI_DRAWER_PAPER = By.cssSelector("div.MuiDrawer-paper");
+    private static final By MUI_SNACKBAR_OR_ALERT =
+            By.cssSelector("div.MuiSnackbarContent-message, div.MuiAlert-message");
 
     protected final Logger logger = LoggerFactory.getLogger(getClass());
     protected final WebDriver driver;
@@ -64,6 +71,26 @@ public abstract class BasePage {
         } catch (Exception e) {
             return getCurrentUrl().contains(urlFraction);
         }
+    }
+
+    /**
+     * Navigasi URL dengan proteksi terhadap stall script pihak ketiga (Cloudflare Insights/analytics).
+     *
+     * @param url target URL
+     */
+    protected void safeNavigate(String url) {
+        logger.info("Navigating to: {}", url);
+        try {
+            driver.get(url);
+        } catch (TimeoutException e) {
+            logger.warn("Page load timeout caught for [{}], stopping external scripts.", url);
+            try {
+                ((JavascriptExecutor) driver).executeScript("window.stop();");
+            } catch (Exception ignored) {
+                // Ignore if renderer busy
+            }
+        }
+        sleepQuietly(400);
     }
 
     protected void click(WebElement element) {
@@ -130,6 +157,109 @@ public abstract class BasePage {
     protected void scrollToElement(WebElement element) {
         ((JavascriptExecutor) driver).executeScript(
                 "arguments[0].scrollIntoView({behavior: 'instant', block: 'center'});", element);
+    }
+
+    /**
+     * Membuka MUI SwipeableDrawer di portal Mobile Mirroring dengan JS click & retry hidrasi Next.js
+     * (selaras dengan pola teruji AdminCrossModuleE2EPage).
+     *
+     * @param triggerButtonLocator locator tombol pembuka drawer (misal Ajukan Sakit / Ajukan Cuti)
+     */
+    protected void openSwipeableDrawerWithRetry(By triggerButtonLocator) {
+        wait.until(d -> "complete".equals(((JavascriptExecutor) d).executeScript("return document.readyState")));
+        WebElement btn = waitForVisibility(triggerButtonLocator);
+        sleepQuietly(800);
+        for (int attempt = 1; attempt <= 3; attempt++) {
+            clickWithJS(btn);
+            sleepQuietly(600);
+            List<WebElement> drawers = driver.findElements(MUI_DRAWER_PAPER);
+            for (WebElement drawer : drawers) {
+                if (drawer.isDisplayed()) {
+                    return;
+                }
+            }
+            logger.warn("SwipeableDrawer not yet visible after attempt {}, retrying...", attempt);
+            sleepQuietly(800);
+        }
+        waitForVisibility(MUI_DRAWER_PAPER);
+    }
+
+    /**
+     * Membuka dropdown MUI Select di dalam Drawer menggunakan event mousedown.
+     *
+     * @param selectTrigger elemen trigger MUI Select
+     */
+    protected void openMuiSelectWithMouseDown(WebElement selectTrigger) {
+        ((JavascriptExecutor) driver).executeScript(
+                "arguments[0].dispatchEvent(new MouseEvent('mousedown', {bubbles:true, cancelable:true}));",
+                selectTrigger
+        );
+    }
+
+    /**
+     * Memilih tanggal pada komponen react-date-range menggunakan rangkaian MouseEvent penuh.
+     *
+     * @param dayButton elemen tombol tanggal rdrDay
+     */
+    protected void dispatchCalendarDayMouseEvents(WebElement dayButton) {
+        ((JavascriptExecutor) driver).executeScript(
+                "['mouseenter','mousedown','mouseup','click'].forEach(ev => "
+                        + "arguments[0].dispatchEvent(new MouseEvent(ev, {bubbles:true, cancelable:true})));",
+                dayButton
+        );
+    }
+
+    /**
+     * Melakukan scroll ke bagian paling bawah viewport/container untuk memicu InfiniteScroll
+     * ($skip = 10 * page) pada daftar riwayat Mobile Mirroring.
+     */
+    public void scrollToBottomForInfiniteScroll() {
+        ((JavascriptExecutor) driver).executeScript(
+                "window.scrollTo(0, Math.max(document.body.scrollHeight, document.documentElement.scrollHeight));"
+        );
+        sleepQuietly(900);
+    }
+
+    /**
+     * Menunggu dan mengambil teks notifikasi MUI Snackbar / Alert.
+     *
+     * @param timeoutSeconds batas waktu tunggu dalam detik
+     * @return teks snackbar/alert atau string kosong jika tidak muncul
+     */
+    public String waitForSnackbarText(int timeoutSeconds) {
+        try {
+            WebDriverWait customWait = new WebDriverWait(driver, Duration.ofSeconds(timeoutSeconds));
+            WebElement msg = customWait.until(ExpectedConditions.visibilityOfElementLocated(MUI_SNACKBAR_OR_ALERT));
+            return msg.getText().trim();
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    /**
+     * Membersihkan cookie dan Web Storage agar transisi antar sesi user terisolasi penuh.
+     */
+    public void clearBrowserStorageAndCookies() {
+        try {
+            driver.manage().deleteAllCookies();
+        } catch (Exception ignored) {
+            // Best-effort cookie cleanup
+        }
+        try {
+            ((JavascriptExecutor) driver).executeScript(
+                    "window.localStorage.clear(); window.sessionStorage.clear();"
+            );
+        } catch (Exception ignored) {
+            // Storage may not be accessible on about:blank
+        }
+    }
+
+    protected void sleepQuietly(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     /**

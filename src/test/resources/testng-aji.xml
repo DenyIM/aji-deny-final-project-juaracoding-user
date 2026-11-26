@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
-<suite name="HADIR Karyawan Automation Suite - Tester Aji (SIT v3 - 96 TCs)" parallel="classes" thread-count="2" verbose="1">
+<suite name="HADIR Karyawan Automation Suite - Tester Aji (123 TCs - 68 Web UI + 55 REST API)" verbose="1">
 
     <listeners>
         <listener class-name="com.juaracoding.magang.listeners.TestListener" />
@@ -10,12 +10,12 @@
     <parameter name="headless" value="true" />
 
     <!--
-        Daftar kelas test Tester Aji (68 Web UI + 28 REST Assured API = 96 TCs)
-        akan diaktifkan pada Fase 6 setelah branch fitur di-merge ke main:
+        Eksekusi SEKUENSIAL khusus Tester Aji (123 TCs = 68 Web UI + 55 REST Assured API).
+        Daftar kelas akan diaktifkan setelah branch fitur Tester Aji di-merge ke main:
         AttendanceTest, ActivityHistoryTest, CorrectionTest, OvertimeTest,
-        UserProfileTest, UserCrossModuleAjiE2ETest, UserGroupBApiTest
+        UserProfileTest, UserCrossModuleAjiE2ETest, UserGroupBApiTest.
     -->
-    <test name="Tester Aji - Web UI (68 TCs) &amp; REST Assured API (28 TCs)">
+    <test name="Tester Aji - Karyawan Web UI (68 TCs) &amp; REST API Group B (55 TCs)">
         <classes />
     </test>
 

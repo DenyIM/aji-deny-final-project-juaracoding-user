@@ -1,8 +1,8 @@
 package com.juaracoding.magang.utils;
 
 /**
- * Sentralisasi konfigurasi URL Mobile Mirroring, endpoint backend FeathersJS terverifikasi,
- * kredensial ter-encode Base64, timeout, pool NIK, dan path laporan pengujian Karyawan.
+ * Sentralisasi konfigurasi URL Mobile Mirroring, endpoint backend FeathersJS & Next.js BFF terverifikasi,
+ * kredensial ter-encode Base64 (zero plaintext), timeout, pool NIK, dan path laporan pengujian Karyawan.
  */
 public final class Constants {
 
@@ -35,11 +35,14 @@ public final class Constants {
     // REAL BACKEND API URI & ENDPOINTS (FEATHERSJS)
     // ==========================================
     public static final String API_BASE_URI = "https://api-dev.dikahadir.com/hadir-api-magang";
+    public static final String API_STATIC_UPLOADS_BASE_URI = "https://api-dev.dikahadir.com/uploads";
     public static final String API_AUTH_ENDPOINT = "/authentication";
     public static final String API_AUTH_MANAGEMENT_ENDPOINT = "/auth-management";
     public static final String API_USERS_ENDPOINT = "/users";
+    public static final String API_USER_SUMMARY_ENDPOINT = "/user-summary";
     public static final String API_ACTIVITY_ENDPOINT = "/activity";
     public static final String API_CLOCK_OUT_ENDPOINT = "/activity/request-activity";
+    public static final String API_REQUEST_ACTIVITY_ENDPOINT = "/activity/request-activity";
     public static final String API_CORRECTIONS_ENDPOINT = "/activity-correction";
     public static final String API_OVERTIME_ENDPOINT = "/overtime";
     public static final String API_OFF_PERMIT_ENDPOINT = "/off-permit";
@@ -47,10 +50,23 @@ public final class Constants {
     public static final String API_EARLY_LEAVE_ENDPOINT = "/early-leave";
     public static final String API_BUSINESS_TRIPS_ENDPOINT = "/business-trips";
     public static final String API_PROJECT_LEAVE_ENDPOINT = "/project-leave";
+    public static final String API_CANCEL_LEAVE_ENDPOINT = "/cancel-leave";
     public static final String API_SICK_ENDPOINT = "/sick";
     public static final String API_SHARE_REPORT_ENDPOINT = "/share-report";
     public static final String API_UPLOAD_ENDPOINT = "/upload";
     public static final String API_LOCATIONS_ENDPOINT = "/location-point";
+
+    // ==========================================
+    // NEXT.JS BFF ROUTES (HOSTED ON BASE_URL)
+    // ==========================================
+    public static final String BFF_SESSION_COOKIE_NAME = "hadir_app_magang";
+    public static final String BFF_LOGIN_ENDPOINT = "/api/login";
+    public static final String BFF_SICK_ENDPOINT = "/api/sick";
+    public static final String BFF_ACTIVITY_SICK_ENDPOINT = "/api/activity/sick";
+    public static final String BFF_PROJECT_LEAVE_ENDPOINT = "/api/leave/project-leave";
+    public static final String BFF_CLIENT_GENERATE_REPORT_ENDPOINT = "/api/client/generate-report";
+    public static final String BFF_CLIENT_LEAVE_REPORT_ENDPOINT = "/api/client/leave-report";
+    public static final String BFF_CLIENT_OVERTIME_REPORT_ENDPOINT = "/api/client/overtime-report";
 
     // ==========================================
     // CREDENTIALS (BASE64 ENCODED - NO PLAINTEXT)
@@ -64,10 +80,15 @@ public final class Constants {
     public static final String HYBRID_ADMIN_EMAIL = "admin@hadir.com";
     public static final String HYBRID_ADMIN_PASSWORD_ENCODED = "TWFnYW5nU1FBX0pDQDEyMw==";
 
-    // Pool NIK valid dari SIT untuk pengujian registrasi mandiri /absen/register
+    // Pool 35 NIK master DIKA terverifikasi (selaras dengan EmployeeApiHelper di proyek Admin)
     public static final String[] VALID_NIK_POOL = {
-        "F1240001", "D6240005", "D7240031", "D8240010",
-        "D7240029", "D7240028", "D7240027", "D6240004"
+        "D7231978", "D7231983", "D7231984", "D7231985", "D7232001",
+        "D7232029", "D6230561", "D8230009", "D8230013", "D8230014",
+        "D7240028", "D7240027", "D6240004", "D8240008", "D7240023",
+        "D7240022", "D7240021", "D7240020", "D7240019", "D8240007",
+        "D6240003", "D7240018", "D9240001", "D7240017", "D7240016",
+        "D7240015", "D7240014", "D6240002", "D7240013", "D7240012",
+        "F1240001", "D6240005", "D7240031", "D8240010", "D7240029"
     };
 
     // Koordinat GPS default area kantor & luar radius (untuk simulasi CDP)
@@ -92,4 +113,3 @@ public final class Constants {
     public static final String SIT_EXCEL_PATH = "docs/SIT_Scenario_Magang_Hadir.xlsx";
     public static final String TESTDATA_DIR = "src/test/resources/testdata/";
 }
-

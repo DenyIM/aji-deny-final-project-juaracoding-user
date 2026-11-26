@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
-<suite name="HADIR Karyawan Master Automation Suite (SIT v3 - 195 TCs)" parallel="classes" thread-count="2" verbose="1">
+<suite name="HADIR Karyawan Master Automation Suite (SIT v4 - 250 Target TCs - 140 UI + 110 API)" verbose="1">
 
     <listeners>
         <listener class-name="com.juaracoding.magang.listeners.TestListener" />
@@ -10,15 +10,20 @@
     <parameter name="headless" value="true" />
 
     <!--
-        Daftar kelas test Tester Deny (99 TCs) & Tester Aji (96 TCs) akan diaktifkan
-        pada Fase 6 setelah masing-masing branch fitur di-merge ke main:
-        Tester Deny: UserLoginTest, RegisterTest, ResetPasswordTest, PermitTest,
-                     LeaveAndSickTest, DownloadReportTest, UserCrossModuleDenyE2ETest, UserGroupAApiTest
-        Tester Aji : AttendanceTest, ActivityHistoryTest, CorrectionTest, OvertimeTest,
-                     UserProfileTest, UserCrossModuleAjiE2ETest, UserGroupBApiTest
+        Eksekusi SEKUENSIAL (tanpa parallel="classes") untuk mencegah konflik sesi akun bersama
+        hadirsqa1@gmail.com dan menghindari rate-limit/timeout firewall pada api-dev.dikahadir.com.
+        Kelas test berikutnya ditambahkan bertahap setelah masing-masing feature branch di-merge ke main:
+        - Tester Deny (127 TCs = 72 UI + 55 API):
+          UserLoginTest (aktif), RegisterTest, ResetPasswordTest, PermitTest,
+          LeaveAndSickTest, DownloadReportTest, UserCrossModuleDenyE2ETest, UserGroupAApiTest
+        - Tester Aji (123 TCs = 68 UI + 55 API):
+          AttendanceTest, ActivityHistoryTest, CorrectionTest, OvertimeTest,
+          UserProfileTest, UserCrossModuleAjiE2ETest, UserGroupBApiTest
     -->
-    <test name="HADIR Karyawan Master Suite (Fase 3 Foundation Ready)">
-        <classes />
+    <test name="Karyawan Web UI - Autentikasi &amp; Modul Aktif">
+        <classes>
+            <class name="com.juaracoding.magang.tests.user.deny.UserLoginTest" />
+        </classes>
     </test>
 
 </suite>

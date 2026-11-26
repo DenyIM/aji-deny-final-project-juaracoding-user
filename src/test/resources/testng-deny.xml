@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
-<suite name="HADIR Karyawan Automation Suite - Tester Deny (SIT v3 - 99 TCs)" parallel="classes" thread-count="2" verbose="1">
+<suite name="HADIR Karyawan Automation Suite - Tester Deny (127 TCs - 72 Web UI + 55 REST API)" verbose="1">
 
     <listeners>
         <listener class-name="com.juaracoding.magang.listeners.TestListener" />
@@ -10,13 +10,15 @@
     <parameter name="headless" value="true" />
 
     <!--
-        Daftar kelas test Tester Deny (72 Web UI + 27 REST Assured API = 99 TCs)
-        akan diaktifkan pada Fase 6 setelah branch fitur di-merge ke main:
-        UserLoginTest, RegisterTest, ResetPasswordTest, PermitTest,
-        LeaveAndSickTest, DownloadReportTest, UserCrossModuleDenyE2ETest, UserGroupAApiTest
+        Eksekusi SEKUENSIAL khusus Tester Deny (127 TCs = 72 Web UI + 55 REST Assured API).
+        Kelas fitur berikutnya ditambahkan setelah merge branch masing-masing:
+        RegisterTest, ResetPasswordTest, PermitTest, LeaveAndSickTest,
+        DownloadReportTest, UserCrossModuleDenyE2ETest, UserGroupAApiTest.
     -->
-    <test name="Tester Deny - Web UI (72 TCs) &amp; REST Assured API (27 TCs)">
-        <classes />
+    <test name="Tester Deny - Karyawan Web UI (72 TCs)">
+        <classes>
+            <class name="com.juaracoding.magang.tests.user.deny.UserLoginTest" />
+        </classes>
     </test>
 
 </suite>

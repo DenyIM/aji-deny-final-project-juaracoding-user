@@ -21,9 +21,10 @@ import java.util.Map;
 import static io.restassured.RestAssured.given;
 
 /**
- * Kelas induk untuk seluruh pengujian API (REST Assured) pada backend FeathersJS HADIR.
+ * Kelas induk untuk seluruh pengujian API (REST Assured) pada backend FeathersJS HADIR
+ * serta rute Next.js BFF (magang.dikahadir.com/api/*).
  * Mengaktifkan relaxedHTTPSValidation untuk sertifikat TLS staging dan menyediakan
- * utilitas autentikasi JWT via POST /authentication.
+ * utilitas autentikasi JWT (POST /authentication) maupun sesi cookie BFF (POST /api/login).
  */
 @Listeners(TestListener.class)
 public abstract class BaseApiTest {
@@ -38,10 +39,10 @@ public abstract class BaseApiTest {
     }
 
     /**
-     * Membangun RequestSpecification standar dengan relaxedHTTPSValidation agar dapat
+     * Membangun RequestSpecification standar FeathersJS dengan relaxedHTTPSValidation agar dapat
      * dipanggil baik dari subclass BaseApiTest maupun helper statis Hybrid @Before.
      *
-     * @return RequestSpecification terkonfigurasi
+     * @return RequestSpecification terkonfigurasi untuk API_BASE_URI
      */
     public static RequestSpecification buildDefaultRequestSpec() {
         RestAssured.baseURI = Constants.API_BASE_URI;
@@ -49,6 +50,24 @@ public abstract class BaseApiTest {
 
         return new RequestSpecBuilder()
                 .setBaseUri(Constants.API_BASE_URI)
+                .setRelaxedHTTPSValidation()
+                .setContentType(ContentType.JSON)
+                .setAccept(ContentType.JSON)
+                .log(LogDetail.METHOD)
+                .log(LogDetail.URI)
+                .build();
+    }
+
+    /**
+     * Membangun RequestSpecification khusus rute Next.js BFF pada BASE_URL (magang.dikahadir.com).
+     *
+     * @return RequestSpecification terkonfigurasi untuk BASE_URL
+     */
+    public static RequestSpecification buildBffRequestSpec() {
+        RestAssured.useRelaxedHTTPSValidation();
+
+        return new RequestSpecBuilder()
+                .setBaseUri(Constants.BASE_URL)
                 .setRelaxedHTTPSValidation()
                 .setContentType(ContentType.JSON)
                 .setAccept(ContentType.JSON)
@@ -84,7 +103,34 @@ public abstract class BaseApiTest {
     }
 
     /**
-     * Melakukan login dan mengekstrak JWT accessToken.
+     * Melakukan login ke Next.js BFF (POST https://magang.dikahadir.com/api/login) menggunakan
+     * kredensial Base64 dan mengembalikan nilai cookie sesi hadir_app_magang.
+     *
+     * @param email           email akun
+     * @param encodedPassword password ter-encode Base64
+     * @return nilai cookie sesi hadir_app_magang atau null jika gagal
+     */
+    public static String authenticateBffSessionCookie(String email, String encodedPassword) {
+        String plainPassword = SecurityUtil.decode(encodedPassword);
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("email", email);
+        payload.put("password", plainPassword);
+
+        Response response = given()
+                .spec(buildBffRequestSpec())
+                .body(payload)
+        .when()
+                .post(Constants.BFF_LOGIN_ENDPOINT)
+        .then()
+                .extract()
+                .response();
+
+        return response.getCookie(Constants.BFF_SESSION_COOKIE_NAME);
+    }
+
+    /**
+     * Melakukan login FeathersJS dan mengekstrak JWT accessToken.
      *
      * @param email           email akun
      * @param encodedPassword password ter-encode Base64
@@ -109,7 +155,7 @@ public abstract class BaseApiTest {
     }
 
     /**
-     * Membentuk RequestSpecification dengan header Authorization: Bearer &lt;token&gt;.
+     * Membentuk RequestSpecification FeathersJS dengan header Authorization: Bearer &lt;token&gt;.
      *
      * @param token JWT accessToken
      * @return RequestSpecification terautentikasi
@@ -122,5 +168,19 @@ public abstract class BaseApiTest {
         }
         return builder.build();
     }
-}
 
+    /**
+     * Membentuk RequestSpecification Next.js BFF dengan cookie sesi hadir_app_magang.
+     *
+     * @param sessionCookie nilai cookie sesi BFF
+     * @return RequestSpecification BFF terautentikasi
+     */
+    protected RequestSpecification getBffAuthenticatedSpec(String sessionCookie) {
+        RequestSpecBuilder builder = new RequestSpecBuilder()
+                .addRequestSpecification(buildBffRequestSpec());
+        if (sessionCookie != null && !sessionCookie.trim().isEmpty()) {
+            builder.addCookie(Constants.BFF_SESSION_COOKIE_NAME, sessionCookie.trim());
+        }
+        return builder.build();
+    }
+}
