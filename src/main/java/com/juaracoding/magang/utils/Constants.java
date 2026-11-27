@@ -76,6 +76,7 @@ public final class Constants {
     public static final String BFF_LATE_PERMIT_ENDPOINT = "/api/permit/late-permit";
     public static final String BFF_EARLY_LEAVE_ENDPOINT = "/api/permit/early-permit";
     public static final String BFF_LEAVE_ENDPOINT = "/api/leave";
+    public static final String BFF_CANCEL_LEAVE_ENDPOINT = "/api/cancel/leave";
     public static final String BFF_OVERTIME_ENDPOINT = "/api/overtime";
     public static final String BFF_SICK_ENDPOINT = "/api/sick";
     public static final String BFF_ACTIVITY_SICK_ENDPOINT = "/api/activity/sick";
