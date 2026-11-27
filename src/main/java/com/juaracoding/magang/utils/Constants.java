@@ -54,6 +54,8 @@ public final class Constants {
     public static final String API_EARLY_LEAVE_ENDPOINT = "/early-leave";
     public static final String API_BUSINESS_TRIPS_ENDPOINT = "/business-trips";
     public static final String API_PROJECT_LEAVE_ENDPOINT = "/project-leave";
+    public static final String API_REQUEST_LEAVE_ENDPOINT = "/request-leave";
+    public static final String API_LEAVE_TYPE_ENDPOINT = "/leave-type";
     public static final String API_CANCEL_LEAVE_ENDPOINT = "/cancel-leave";
     public static final String API_SICK_ENDPOINT = "/sick";
     public static final String API_SHARE_REPORT_ENDPOINT = "/share-report";
@@ -63,7 +65,7 @@ public final class Constants {
     // ==========================================
     // NEXT.JS BFF ROUTES (HOSTED ON BASE_URL)
     // ==========================================
-    public static final String BFF_SESSION_COOKIE_NAME = "hadir_app_magang";
+    public static final String BFF_SESSION_COOKIE_NAME = "hadir_web_magang";
     public static final String BFF_LOGIN_ENDPOINT = "/api/login";
     public static final String BFF_USER_SUMMARY_ENDPOINT = "/api/users/summary";
     public static final String BFF_USER_LAST_ACTIVITY_ENDPOINT = "/api/activity/user-last-activity";

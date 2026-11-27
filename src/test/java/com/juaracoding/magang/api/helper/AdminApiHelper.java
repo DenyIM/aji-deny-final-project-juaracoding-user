@@ -202,6 +202,18 @@ public final class AdminApiHelper {
      * @return true jika HTTP 200/201
      */
     public static boolean activateUserWithAdminUpliner(String userId) {
+        return activateUserWithAdminUplinerAndLeave(userId, -1);
+    }
+
+    /**
+     * Mengaktifkan user uji terisolasi dengan upliner Admin HRD serta kuota cuti opsional
+     * (leave_amount >= 0) untuk skenario Pengajuan-Cuti & Sakit.
+     *
+     * @param userId      ID user uji
+     * @param leaveAmount jumlah kuota cuti awal (negatif jika tidak diset)
+     * @return true jika HTTP 200/201
+     */
+    public static boolean activateUserWithAdminUplinerAndLeave(String userId, int leaveAmount) {
         if (userId == null || userId.isBlank()) {
             return false;
         }
@@ -211,7 +223,14 @@ public final class AdminApiHelper {
         body.put("isVerified", true);
         body.put("upliner_id", admin.userId());
         body.put("employee_type_id", "93ead3fc-6a90-4741-9f89-856a83182225"); // PKWT agar masuk /apps/absent (bukan /mitra)
-        body.put("is_user_project", false);
+        if (leaveAmount >= 0) {
+            body.put("job_level_id", "d9c079bd-c9b9-44eb-98df-65f96f75534b");
+            body.put("job_departement_id", "7e8b9e92-7e8f-47ed-b886-b647bf107c03");
+            body.put("is_user_project", true); // wajib true agar GET /project-leave/{id} & /apps/absent/leave-client SSR 200 OK
+            body.put("leave_amount", leaveAmount);
+        } else {
+            body.put("is_user_project", false);
+        }
 
         Response res = given()
                 .spec(authSpec(admin.token()))
@@ -221,8 +240,45 @@ public final class AdminApiHelper {
         .then()
                 .extract()
                 .response();
-        logger.info("Hybrid Admin PATCH /users/{} (active + upliner=admin) -> HTTP {}", userId, res.getStatusCode());
-        return res.getStatusCode() == 200 || res.getStatusCode() == 201;
+        logger.info("Hybrid Admin PATCH /users/{} (active + upliner=admin, leave_amount={}) -> HTTP {}",
+                userId, leaveAmount, res.getStatusCode());
+        boolean patchOk = res.getStatusCode() == 200 || res.getStatusCode() == 201;
+        if (patchOk && leaveAmount >= 0) {
+            assignDefaultScheduleAsAdmin(admin.token(), userId);
+        }
+        return patchOk;
+    }
+
+    private static void assignDefaultScheduleAsAdmin(String adminToken, String userId) {
+        try {
+            Response schedRes = given()
+                    .spec(authSpec(adminToken))
+                    .queryParam("$limit", 1)
+            .when()
+                    .get("/schedule")
+            .then()
+                    .extract()
+                    .response();
+            String scheduleId = schedRes.jsonPath().getString("data[0].id");
+            if (scheduleId == null || scheduleId.isBlank()) {
+                scheduleId = "aaa0fc8a-0860-4792-90b5-dc95eef9043d";
+            }
+            Map<String, Object> body = new HashMap<>();
+            body.put("user_id", userId);
+            body.put("schedule_id", scheduleId);
+            Response assignRes = given()
+                    .spec(authSpec(adminToken))
+                    .body(body)
+            .when()
+                    .post("/user-schedule")
+            .then()
+                    .extract()
+                    .response();
+            logger.info("Hybrid Admin POST /user-schedule (user={}, schedule={}) -> HTTP {}",
+                    userId, scheduleId, assignRes.getStatusCode());
+        } catch (Exception e) {
+            logger.warn("Could not assign default /user-schedule for user {}: {}", userId, e.getMessage());
+        }
     }
 
     /**
@@ -994,6 +1050,301 @@ public final class AdminApiHelper {
 
         logger.info("Hybrid GET /project-leave/{} -> HTTP {}", userId, res.getStatusCode());
         return res;
+    }
+
+    /**
+     * Mengambil ID tipe cuti yang valid untuk submit (memiliki {@code day_limit != null}
+     * agar backend tidak melempar NPE pada properti {@code day_limit}) melalui GET /leave-type.
+     *
+     * @param bearerToken JWT Bearer token user/admin (boleh null -> gunakan default user)
+     * @return leave_type_id atau null jika tidak tersedia
+     */
+    public static String getPreferredLeaveTypeId(String bearerToken) {
+        String effectiveToken = (bearerToken != null && !bearerToken.isBlank())
+                ? bearerToken
+                : loginAsDefaultUser().token();
+        Response res = given()
+                .spec(authSpec(effectiveToken))
+        .when()
+                .get(Constants.API_LEAVE_TYPE_ENDPOINT)
+        .then()
+                .extract()
+                .response();
+        List<Map<String, Object>> types = res.jsonPath().getList("data");
+        if (types == null || types.isEmpty()) {
+            return null;
+        }
+        for (Map<String, Object> item : types) {
+            if (item.get("day_limit") != null) {
+                return String.valueOf(item.get("id"));
+            }
+        }
+        return String.valueOf(types.get(0).get("id"));
+    }
+
+    /**
+     * Login ke Next.js BFF {@code POST /api/login} dan mengembalikan seluruh cookies sesi
+     * (termasuk {@code hadir_web_magang}).
+     */
+    private static Map<String, String> loginBffCookies(String userEmail, String encodedPassword) {
+        Map<String, Object> loginPayload = new HashMap<>();
+        loginPayload.put("strategy", "local");
+        loginPayload.put("email", userEmail);
+        loginPayload.put("password", SecurityUtil.decode(encodedPassword));
+
+        Response loginRes = given()
+                .baseUri(Constants.BASE_URL)
+                .relaxedHTTPSValidation()
+                .contentType("application/json")
+                .body(loginPayload)
+        .when()
+                .post(Constants.BFF_LOGIN_ENDPOINT)
+        .then()
+                .extract()
+                .response();
+
+        Map<String, String> cookies = loginRes.getCookies();
+        if (cookies == null || cookies.isEmpty()) {
+            logger.warn("BFF login returned empty cookies for [{}]: HTTP {}", userEmail, loginRes.getStatusCode());
+            return Map.of();
+        }
+        return cookies;
+    }
+
+    /**
+     * Seeding pengajuan Cuti Karyawan via Next.js BFF {@code POST /api/login} + {@code POST /api/leave}
+     * agar sesi cookie {@code hadir_web_magang} terautentikasi persis seperti pengajuan UI.
+     */
+    public static String createPendingLeave(
+            String userEmail,
+            String encodedPassword,
+            String leaveTypeId,
+            String dateFromYmd,
+            String dateToYmd,
+            String notes
+    ) {
+        Map<String, String> cookies = loginBffCookies(userEmail, encodedPassword);
+        if (cookies.isEmpty()) {
+            return null;
+        }
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("leave_type_id", leaveTypeId);
+        body.put("leave_date_from", dateFromYmd);
+        body.put("leave_date_to", dateToYmd);
+        body.put("time_zone", "+07:00");
+        body.put("notes", notes);
+
+        Response res = given()
+                .baseUri(Constants.BASE_URL)
+                .relaxedHTTPSValidation()
+                .cookies(cookies)
+                .contentType("application/json")
+                .body(body)
+        .when()
+                .post(Constants.BFF_LEAVE_ENDPOINT)
+        .then()
+                .extract()
+                .response();
+
+        logger.info("Hybrid Seed BFF POST /api/leave -> HTTP {}", res.getStatusCode());
+        if (res.getStatusCode() == 200 || res.getStatusCode() == 201) {
+            return res.jsonPath().getString("id");
+        }
+        logger.warn("Seed BFF /api/leave did not succeed: {}", res.asString());
+        return null;
+    }
+
+    /**
+     * Admin/Upliner menyetujui atau menolak pengajuan Cuti via PATCH /request-leave/{id}.
+     *
+     * @param leaveId     ID transaksi cuti
+     * @param approve     true untuk Approved, false untuk Rejected
+     * @param rejectNotes alasan penolakan (diisi jika approve = false)
+     * @return true jika HTTP 200/201
+     */
+    public static boolean reviewLeaveAsAdmin(String leaveId, boolean approve, String rejectNotes) {
+        if (leaveId == null || leaveId.isBlank()) {
+            return false;
+        }
+        ApiSession admin = loginAsHybridAdmin();
+        Map<String, Object> body = new HashMap<>();
+        body.put("is_approved", approve);
+        if (!approve && rejectNotes != null && !rejectNotes.isBlank()) {
+            body.put("reject_notes", rejectNotes);
+        }
+        Response res = given()
+                .spec(authSpec(admin.token()))
+                .body(body)
+        .when()
+                .patch(Constants.API_REQUEST_LEAVE_ENDPOINT + "/" + leaveId)
+        .then()
+                .extract()
+                .response();
+        logger.info("Hybrid Admin PATCH /request-leave/{} (approve={}) -> HTTP {}", leaveId, approve, res.getStatusCode());
+        return res.getStatusCode() == 200 || res.getStatusCode() == 201;
+    }
+
+    /**
+     * Membatalkan pengajuan cuti Pending via {@code PATCH /request-leave/{id}} dengan {@code is_canceled=true}
+     * (menghasilkan badge status 'Dibatalkan' pada kartu List Request Cuti).
+     */
+    public static boolean cancelPendingLeaveAsAdmin(String leaveId) {
+        if (leaveId == null || leaveId.isBlank()) {
+            return false;
+        }
+        ApiSession admin = loginAsHybridAdmin();
+        Map<String, Object> body = new HashMap<>();
+        body.put("is_canceled", true);
+        Response res = given()
+                .spec(authSpec(admin.token()))
+                .body(body)
+        .when()
+                .patch(Constants.API_REQUEST_LEAVE_ENDPOINT + "/" + leaveId)
+        .then()
+                .extract()
+                .response();
+        logger.info("Hybrid Admin PATCH /request-leave/{} (is_canceled=true) -> HTTP {}", leaveId, res.getStatusCode());
+        return res.getStatusCode() == 200 || res.getStatusCode() == 201;
+    }
+
+    /**
+     * Mengambil jumlah total transaksi cuti user tertentu melalui GET /request-leave.
+     */
+    public static int getUserRequestLeaveCount(String bearerToken, String userId) {
+        String effectiveToken = (bearerToken != null && !bearerToken.isBlank())
+                ? bearerToken
+                : loginAsDefaultUser().token();
+        Response res = given()
+                .spec(authSpec(effectiveToken))
+                .queryParam("user_id", userId)
+                .queryParam("$limit", 1)
+        .when()
+                .get(Constants.API_REQUEST_LEAVE_ENDPOINT)
+        .then()
+                .extract()
+                .response();
+        Integer total = res.jsonPath().get("total");
+        return total != null ? total : 0;
+    }
+
+    /**
+     * Mencari ID transaksi cuti terbaru milik user tertentu berdasarkan snippet notes.
+     */
+    public static String findLatestRequestLeaveIdByNotes(String bearerToken, String userId, String notesSnippet) {
+        return findLatestUserRecordIdByField(
+                bearerToken, userId, Constants.API_REQUEST_LEAVE_ENDPOINT, "notes", notesSnippet);
+    }
+
+    /**
+     * Mencari ID transaksi cuti terbaru milik user tertentu (tanpa filter snippet notes).
+     */
+    public static String findLatestRequestLeaveId(String bearerToken, String userId) {
+        String effectiveToken = (bearerToken != null && !bearerToken.isBlank())
+                ? bearerToken
+                : loginAsDefaultUser().token();
+        Response res = given()
+                .spec(authSpec(effectiveToken))
+                .queryParam("user_id", userId)
+                .queryParam("$limit", 1)
+                .queryParam("$sort[created_at]", -1)
+        .when()
+                .get(Constants.API_REQUEST_LEAVE_ENDPOINT)
+        .then()
+                .extract()
+                .response();
+        List<String> ids = res.jsonPath().getList("data.id");
+        return (ids != null && !ids.isEmpty()) ? ids.get(0) : null;
+    }
+
+    /**
+     * Seeding pengajuan Sakit (SAKIT) melalui Next.js BFF {@code POST /api/sick}
+     * lalu mengembalikan ID record dari {@code GET /activity?status=SAKIT}.
+     */
+    public static String createPendingSick(
+            String userEmail,
+            String encodedPassword,
+            String userToken,
+            String userId,
+            String dateFromYmd,
+            String dateToYmd,
+            String documentId
+    ) {
+        Map<String, String> cookies = loginBffCookies(userEmail, encodedPassword);
+        if (cookies.isEmpty()) {
+            return null;
+        }
+        Map<String, Object> docEntry = new HashMap<>();
+        docEntry.put("document", documentId);
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("request_type", "SAKIT");
+        body.put("sick_request_date_from", dateFromYmd);
+        body.put("sick_request_date_to", dateToYmd);
+        body.put("time_zone", "+07:00");
+        body.put("user_sick_document", List.of(docEntry));
+
+        Response res = given()
+                .baseUri(Constants.BASE_URL)
+                .relaxedHTTPSValidation()
+                .cookies(cookies)
+                .contentType("application/json")
+                .body(body)
+        .when()
+                .post(Constants.BFF_SICK_ENDPOINT)
+        .then()
+                .extract()
+                .response();
+
+        logger.info("Hybrid Seed BFF POST /api/sick -> HTTP {}", res.getStatusCode());
+        if (res.getStatusCode() == 200 || res.getStatusCode() == 201) {
+            return findLatestSickActivityId(userToken, userId);
+        }
+        logger.warn("Seed BFF /api/sick did not succeed: {}", res.asString());
+        return null;
+    }
+
+    /**
+     * Mengambil jumlah pengajuan Sakit (status=SAKIT) milik user tertentu via GET /activity.
+     */
+    public static int getUserSickCount(String bearerToken, String userId) {
+        String effectiveToken = (bearerToken != null && !bearerToken.isBlank())
+                ? bearerToken
+                : loginAsDefaultUser().token();
+        Response res = given()
+                .spec(authSpec(effectiveToken))
+                .queryParam("user_id", userId)
+                .queryParam("status", "SAKIT")
+                .queryParam("$limit", 1)
+        .when()
+                .get(Constants.API_ACTIVITY_ENDPOINT)
+        .then()
+                .extract()
+                .response();
+        Integer total = res.jsonPath().get("total");
+        return total != null ? total : 0;
+    }
+
+    /**
+     * Mencari ID pengajuan Sakit terbaru milik user tertentu via GET /activity?status=SAKIT.
+     */
+    public static String findLatestSickActivityId(String bearerToken, String userId) {
+        String effectiveToken = (bearerToken != null && !bearerToken.isBlank())
+                ? bearerToken
+                : loginAsDefaultUser().token();
+        Response res = given()
+                .spec(authSpec(effectiveToken))
+                .queryParam("user_id", userId)
+                .queryParam("status", "SAKIT")
+                .queryParam("$limit", 1)
+                .queryParam("$sort[created_at]", -1)
+        .when()
+                .get(Constants.API_ACTIVITY_ENDPOINT)
+        .then()
+                .extract()
+                .response();
+        List<String> ids = res.jsonPath().getList("data.id");
+        return (ids != null && !ids.isEmpty()) ? ids.get(0) : null;
     }
 
     /**
