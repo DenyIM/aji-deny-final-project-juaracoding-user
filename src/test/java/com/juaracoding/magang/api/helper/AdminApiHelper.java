@@ -137,7 +137,7 @@ public final class AdminApiHelper {
     }
 
     /**
-     * Seeding pengajuan Izin Off sebagai Karyawan via POST /off-permit.
+     * Seeding pengajuan Izin Off sebagai Karyawan default via POST /off-permit.
      *
      * @param dateOff tanggal izin (yyyy-MM-dd)
      * @param reason  alasan izin
@@ -145,12 +145,24 @@ public final class AdminApiHelper {
      */
     public static String createPendingOffPermit(String dateOff, String reason) {
         ApiSession session = loginAsDefaultUser();
+        return createPendingOffPermit(session.token(), dateOff, reason);
+    }
+
+    /**
+     * Seeding pengajuan Izin Off menggunakan token user tertentu via POST /off-permit.
+     *
+     * @param userToken JWT Bearer token user target
+     * @param dateOff   tanggal izin (yyyy-MM-dd)
+     * @param reason    alasan izin
+     * @return ID record off-permit yang dibuat (atau null jika gagal)
+     */
+    public static String createPendingOffPermit(String userToken, String dateOff, String reason) {
         Map<String, Object> body = new HashMap<>();
         body.put("date_off", dateOff);
         body.put("reason", reason);
 
         Response res = given()
-                .spec(authSpec(session.token()))
+                .spec(authSpec(userToken))
                 .body(body)
         .when()
                 .post(Constants.API_OFF_PERMIT_ENDPOINT)
@@ -167,15 +179,181 @@ public final class AdminApiHelper {
     }
 
     /**
+     * Login sebagai user tertentu via POST /authentication dan mengembalikan ApiSession.
+     *
+     * @param email           email user
+     * @param encodedPassword password Base64 ter-encode
+     * @return ApiSession berisi JWT token dan userId
+     */
+    public static ApiSession loginAsUser(String email, String encodedPassword) {
+        Response res = BaseApiTest.authenticate(email, encodedPassword);
+        int status = res.getStatusCode();
+        if (status != 200 && status != 201) {
+            throw new IllegalStateException("User API authentication failed for " + email + " with HTTP " + status);
+        }
+        return new ApiSession(res.jsonPath().getString("accessToken"), res.jsonPath().getString("user.id"));
+    }
+
+    /**
+     * Mengaktifkan user uji terisolasi sekaligus menautkan upliner_id ke Admin HRD
+     * agar Hybrid Admin approval (PATCH /off-permit, dll.) dapat diuji tanpa bentrok atasan.
+     *
+     * @param userId ID user uji
+     * @return true jika HTTP 200/201
+     */
+    public static boolean activateUserWithAdminUpliner(String userId) {
+        if (userId == null || userId.isBlank()) {
+            return false;
+        }
+        ApiSession admin = loginAsHybridAdmin();
+        Map<String, Object> body = new HashMap<>();
+        body.put("is_active", true);
+        body.put("isVerified", true);
+        body.put("upliner_id", admin.userId());
+        body.put("employee_type_id", "93ead3fc-6a90-4741-9f89-856a83182225"); // PKWT agar masuk /apps/absent (bukan /mitra)
+        body.put("is_user_project", false);
+
+        Response res = given()
+                .spec(authSpec(admin.token()))
+                .body(body)
+        .when()
+                .patch(Constants.API_USERS_ENDPOINT + "/" + userId)
+        .then()
+                .extract()
+                .response();
+        logger.info("Hybrid Admin PATCH /users/{} (active + upliner=admin) -> HTTP {}", userId, res.getStatusCode());
+        return res.getStatusCode() == 200 || res.getStatusCode() == 201;
+    }
+
+    /**
      * Admin menyetujui atau menolak pengajuan Izin Off via PATCH /off-permit/{id}.
      *
      * @param permitId     ID record off-permit
-     * @param approve      true untuk Approved, false untuk Rejected
+     * @param approve      true untuk Disetuji, false untuk Ditolak
      * @param rejectReason alasan penolakan (diisi jika approve = false)
      * @return true jika HTTP 200/201
      */
     public static boolean reviewOffPermitAsAdmin(String permitId, boolean approve, String rejectReason) {
-        return patchApprovalStatus(Constants.API_OFF_PERMIT_ENDPOINT, permitId, approve, rejectReason);
+        Map<String, Object> body = new HashMap<>();
+        body.put("is_approved", approve);
+        if (!approve && rejectReason != null && !rejectReason.isBlank()) {
+            body.put("reject_reason", rejectReason);
+        }
+        return patchPermitEndpoint(Constants.API_OFF_PERMIT_ENDPOINT, permitId, body, approve);
+    }
+
+    /**
+     * Admin menyetujui atau menolak pengajuan Izin Terlambat via PATCH /late-permit/{id}.
+     *
+     * @param permitId     ID record late-permit
+     * @param approve      true untuk Disetuji, false untuk Ditolak
+     * @param rejectReason alasan penolakan
+     * @return true jika HTTP 200/201
+     */
+    public static boolean reviewLatePermitAsAdmin(String permitId, boolean approve, String rejectReason) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("is_approved_late", approve);
+        if (!approve && rejectReason != null && !rejectReason.isBlank()) {
+            body.put("late_reject_reason", rejectReason);
+        }
+        return patchPermitEndpoint(Constants.API_LATE_PERMIT_ENDPOINT, permitId, body, approve);
+    }
+
+    /**
+     * Admin menyetujui atau menolak pengajuan Izin Pulang Cepat via PATCH /early-leave/{id}.
+     *
+     * @param permitId     ID record early-leave
+     * @param approve      true untuk Disetuji, false untuk Ditolak
+     * @param rejectReason alasan penolakan
+     * @return true jika HTTP 200/201
+     */
+    public static boolean reviewEarlyLeaveAsAdmin(String permitId, boolean approve, String rejectReason) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("is_approved_early_leave", approve);
+        if (!approve && rejectReason != null && !rejectReason.isBlank()) {
+            body.put("early_leave_reject_reason", rejectReason);
+        }
+        return patchPermitEndpoint(Constants.API_EARLY_LEAVE_ENDPOINT, permitId, body, approve);
+    }
+
+    private static boolean patchPermitEndpoint(String endpointPath, String recordId, Map<String, Object> body, boolean approve) {
+        if (recordId == null || recordId.isBlank()) {
+            logger.warn("Cannot review empty recordId on {}", endpointPath);
+            return false;
+        }
+        ApiSession admin = loginAsHybridAdmin();
+        Response res = given()
+                .spec(authSpec(admin.token()))
+                .body(body)
+        .when()
+                .patch(endpointPath + "/" + recordId)
+        .then()
+                .extract()
+                .response();
+        logger.info("Hybrid Admin PATCH {}/{} (approve={}) -> HTTP {}", endpointPath, recordId, approve, res.getStatusCode());
+        return res.getStatusCode() == 200 || res.getStatusCode() == 201;
+    }
+
+    /**
+     * Mengambil total jumlah record milik user utama pada endpoint FeathersJS tertentu.
+     *
+     * @param endpointPath path endpoint (misal Constants.API_LATE_PERMIT_ENDPOINT)
+     * @return total record
+     */
+    public static int getUserRecordsCount(String endpointPath) {
+        ApiSession session = loginAsDefaultUser();
+        Response res = given()
+                .spec(authSpec(session.token()))
+                .queryParam("user_id", session.userId())
+                .queryParam("$limit", 1)
+        .when()
+                .get(endpointPath)
+        .then()
+                .extract()
+                .response();
+        Integer total = res.jsonPath().get("total");
+        return total != null ? total : 0;
+    }
+
+    /**
+     * Mencari ID record terbaru milik user utama yang field alasannya mengandung teks tertentu.
+     */
+    public static String findLatestUserRecordIdByField(String endpointPath, String reasonField, String reasonSnippet) {
+        ApiSession session = loginAsDefaultUser();
+        return findLatestUserRecordIdByField(session.token(), session.userId(), endpointPath, reasonField, reasonSnippet);
+    }
+
+    /**
+     * Mencari ID record terbaru milik user tertentu yang field alasannya mengandung teks tertentu
+     * (untuk cleanup data hasil submit UI di @AfterMethod).
+     */
+    public static String findLatestUserRecordIdByField(
+            String userToken, String userId, String endpointPath, String reasonField, String reasonSnippet) {
+        if (reasonSnippet == null || reasonSnippet.isBlank()) {
+            return null;
+        }
+        Response res = given()
+                .spec(authSpec(userToken))
+                .queryParam("user_id", userId)
+                .queryParam("$limit", 25)
+                .queryParam("$sort[created_at]", -1)
+        .when()
+                .get(endpointPath)
+        .then()
+                .extract()
+                .response();
+        List<Map<String, Object>> items = res.jsonPath().getList("data");
+        if (items == null) {
+            return null;
+        }
+        for (Map<String, Object> item : items) {
+            Object val = item.get(reasonField);
+            if (val != null && String.valueOf(val).contains(reasonSnippet)) {
+                Object id = item.get("id");
+                return id != null ? String.valueOf(id) : null;
+            }
+        }
+        return null;
     }
 
     /**
@@ -187,14 +365,27 @@ public final class AdminApiHelper {
      */
     public static String createPendingLatePermit(String lateTimeInIso, String reason) {
         ApiSession session = loginAsDefaultUser();
+        return createPendingLatePermit(session.token(), session.userId(), lateTimeInIso, reason);
+    }
+
+    /**
+     * Seeding pengajuan Izin Terlambat berstatus Pending menggunakan token user tertentu.
+     *
+     * @param userToken     JWT token user
+     * @param userId        ID user
+     * @param lateTimeInIso waktu keterlambatan (ISO-8601)
+     * @param reason        alasan keterlambatan
+     * @return ID record late-permit yang dibuat
+     */
+    public static String createPendingLatePermit(String userToken, String userId, String lateTimeInIso, String reason) {
         Map<String, Object> body = new HashMap<>();
-        body.put("user_id", session.userId());
+        body.put("user_id", userId);
         body.put("late_time_in", lateTimeInIso);
         body.put("late_reason", reason);
         body.put("time_zone", "+07:00");
 
         Response res = given()
-                .spec(authSpec(session.token()))
+                .spec(authSpec(userToken))
                 .body(body)
         .when()
                 .post(Constants.API_LATE_PERMIT_ENDPOINT)
