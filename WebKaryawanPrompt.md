@@ -55,7 +55,7 @@
 | **Reset & Upload** | `POST /auth-management`, `POST /upload` | Reset password via `/auth-management` (`sendResetPassword` / `resetPwd`) + OTP di UI; upload foto/file bukti |
 
 > [!NOTE]
-> **Pembaruan Akurasi Rute & Form Web Karyawan (Live Discovery SIT v5)**:
+> **Pembaruan Akurasi Rute & Form Web Karyawan (Live Discovery SIT v5.1)**:
 > - **Register (`/absen/register`)**: Form langsung menampilkan 5 field aktif (`#nik`, `#fullname`, `#email`, `#password` + ikon mata Show/Hide, Upload Selfie `#selfie`) beserta tombol `Daftar` — tidak ada langkah terpisah `Cek NIK` atau auto-fill divisi sebelum submit.
 > - **Reset Password (`/absen/reset-password-request` & `/absen/reset-password`)**: Alur menyertakan request email, input **kode OTP**, Password Baru, Konfirmasi Password (2 ikon mata), dan tautan kembali ke Login.
 > - **Beranda, Kehadiranmu & Lupa Pulang (`/apps/absent` & `/apps/absent/correction/[id]`)**: Beranda memiliki filter **Bulan & Tahun** pada seksi `Kehadiranmu` (7 kartu metrik ringkasan), serta penanganan dialog **"Anda belum melakukan absen keluar"** menuju halaman `/apps/absent/correction/[id]`.
@@ -119,7 +119,7 @@ final-project-karyawan/
 ├── plan.md
 ├── tasklist.md
 ├── docs/
-│   └── SIT_Scenario_Magang_Hadir.xlsx       # Single Source of Truth matriks SIT v5 (276 User TCs: 160 UI + 116 API + kolom Manual Check)
+│   └── SIT_Scenario_Magang_Hadir.xlsx       # Single Source of Truth matriks SIT v5.1 (304 User TCs: 160 UI + 144 API + kolom Manual Check)
 ├── reports/
 │   ├── ExtentReport.html
 │   └── screenshots/
@@ -149,23 +149,23 @@ final-project-karyawan/
         │   │   ├── helper/
         │   │   │   └── AdminApiHelper.java  # Hybrid @Before Admin approval/seeding helper
         │   │   └── user/
-        │   │       ├── UserGroupAApiTest.java # Tester Deny (55 API TCs)
-        │   │       └── UserGroupBApiTest.java # Tester Aji (61 API TCs)
+        │   │       ├── UserGroupAApiTest.java # Tester Deny (71 API TCs)
+        │   │       └── UserGroupBApiTest.java # Tester Aji (73 API TCs)
         │   └── tests/user/
         │       ├── deny/                    # UserLoginTest, RegisterTest, ResetPasswordTest, PermitTest, LeaveAndSickTest, DownloadReportTest, UserCrossModuleDenyE2ETest
         │       └── aji/                     # AttendanceTest, ActivityHistoryTest, CorrectionTest, OvertimeTest, UserProfileTest, LeaderStaffTest, UserCrossModuleAjiE2ETest
         └── resources/
-            ├── testng.xml                   # Master Suite Karyawan (276 TCs, headless=true)
-            ├── testng-deny.xml              # Suite khusus Tester Deny (139 TCs)
-            ├── testng-aji.xml               # Suite khusus Tester Aji (137 TCs)
+            ├── testng.xml                   # Master Suite Karyawan (304 TCs, headless=true)
+            ├── testng-deny.xml              # Suite khusus Tester Deny (155 TCs)
+            ├── testng-aji.xml               # Suite khusus Tester Aji (149 TCs)
             └── testdata/                    # Dummy selfie .jpg/.png, file >5MB, file non-image (.pdf/.mp3)
 ```
 
 ---
 
-## 7. Pembagian Tugas Adil 2 Tester di Proyek Karyawan (Total 276 TCs)
+## 7. Pembagian Tugas Adil 2 Tester di Proyek Karyawan (Total 304 TCs)
 
-Mengacu pada [docs/SIT_Scenario_Magang_Hadir.xlsx](file:///c:/Users/Asus/Documents/JuaraCoding/Final/final-project-admin/docs/SIT_Scenario_Magang_Hadir.xlsx) v5 (kontigu, atomik, memiliki kolom `Severity`, `Priority`, `Test Suite`, `Actual Result / Defect Notes`, dan `Manual Check`):
+Mengacu pada [docs/SIT_Scenario_Magang_Hadir.xlsx](file:///c:/Users/Asus/Documents/JuaraCoding/Final/final-project-admin/docs/SIT_Scenario_Magang_Hadir.xlsx) v5.1 (kontigu, atomik, memiliki kolom `Severity`, `Priority`, `Test Suite`, `Actual Result / Defect Notes`, dan `Manual Check`):
 
 | **Tester** | **Modul Web UI (`160 TCs`)** | **Modul REST Assured API (`144 TCs`)** | **Total & Bobot** |
 | :--- | :--- | :--- | :---: |
@@ -176,7 +176,7 @@ Mengacu pada [docs/SIT_Scenario_Magang_Hadir.xlsx](file:///c:/Users/Asus/Documen
 
 ## 8. Catatan Perilaku Aplikasi & Penanganan Known Defect (`Actual Result / Defect Notes`)
 
-Pada SIT v5, perilaku bug pada SUT **tidak lagi ditulis di kolom `Expected Result`**. Kolom `Expected Result` kini berisi perilaku standar aplikasi yang seharusnya, sedangkan perilaku bug live dicatat di kolom **`Actual Result / Defect Notes`** dengan **`Status = Ready (Known Defect)`** (**7 TCs** pada portal User: `6 UI + 1 API`):
+Pada SIT v5.1, perilaku bug pada SUT **tidak lagi ditulis di kolom `Expected Result`**. Kolom `Expected Result` kini berisi perilaku standar aplikasi yang seharusnya, sedangkan perilaku bug live dicatat di kolom **`Actual Result / Defect Notes`** dengan **`Status = Ready (Known Defect)`** (termasuk `6 UI + 4 API Known Defects` serta temuan Strict QA pada `UserGroupAApiTest`):
 1. **Broken Image setelah Submit/Upload**: Pada Registrasi (`SIT_USR_UI_024`), Avatar & Foto Presensi Beranda (`SIT_USR_UI_046`), Foto Check-In Log Absen (`SIT_USR_UI_061`), dan Bukti Surat Sakit (`SIT_USR_UI_120`), sistem seharusnya menampilkan gambar terunggah utuh, namun di live mengalami *broken image* (`naturalWidth == 0` / HTTP 404).
 2. **Tidak Ada Batas Maksimal Pengajuan Cuti (`SIT_USR_UI_109` & `SIT_USR_API_047`)**: Sistem seharusnya menolak pengajuan cuti yang melebihi sisa kuota tahunan, namun di live masih lolos tanpa validasi batas kuota.
 3. **Kuota `Jumlah Cuti` Pendaftaran User Tidak Sinkron (`SIT_USR_UI_160`)**: `leave_amount` yang diisikan Admin saat pendaftaran user terlihat di form Edit User (`/management/user-v2/edit/[id]`), namun tidak masuk ke data kuota aktif `project-leave` sehingga Karyawan gagal mengajukan cuti di `/apps/absent/leave-client`.

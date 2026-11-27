@@ -1350,23 +1350,29 @@ public class UserGroupAApiTest extends BaseApiTest {
                 assertRejectedClientError(res, "[KNOWN DEFECT] Backend menerima ubah password < 6 karakter ('123')");
         }
 
-        @Test(priority = 83, description = "SIT_USR_API_083: Karyawan biasa mencoba menghapus akunnya sendiri atau akun admin via DELETE /users/{id}", groups = {
+        @Test(priority = 83, description = "SIT_USR_API_083: Karyawan biasa mencoba menghapus akunnya sendiri atau akun user lain via DELETE /users/{id}", groups = {
                         "regression", "negative" })
         public void testSIT_USR_API_083_EmployeeDeleteAccountRejected() {
-                String delEmail = "api_del_iso_" + System.currentTimeMillis() + "@mail.com";
+                long ts = System.currentTimeMillis();
+                String delEmail = "api_del_iso_" + ts + "@mail.com";
                 String delUserId = provisionDisposableUser(availablePoolNik, "SQA Delete Isolation", delEmail, 0);
                 AdminApiHelper.ApiSession delSess = AdminApiHelper.loginAsUser(delEmail,
                                 Constants.USER_PASSWORD_ENCODED);
 
+                String otherEmail = "api_del_target_" + (ts + 1) + "@mail.com";
+                String otherTargetUserId = provisionDisposableUser(availablePoolNik, "SQA Delete Target", otherEmail,
+                                0);
+
                 Response delSelf = sendFeathers(delSess.token(), "DELETE",
                                 Constants.API_USERS_ENDPOINT + "/" + delUserId, null);
-                Response delAdmin = sendFeathers(userAToken, "DELETE", Constants.API_USERS_ENDPOINT + "/" + adminUserId,
-                                null);
+                Response delOther = sendFeathers(userAToken, "DELETE",
+                                Constants.API_USERS_ENDPOINT + "/" + otherTargetUserId, null);
                 ExtentTestManager.logInfo("SIT_USR_API_083 [Critical|P1] DELETE /users own(" + delUserId + ")="
-                                + delSelf.getStatusCode() + ", admin=" + delAdmin.getStatusCode());
+                                + delSelf.getStatusCode() + ", other(" + otherTargetUserId + ")="
+                                + delOther.getStatusCode());
 
                 assertRejectedAuthOrForbidden(delSelf, "[KNOWN SECURITY] DELETE /users/{own_id} oleh user biasa");
-                assertRejectedAuthOrForbidden(delAdmin, "[KNOWN SECURITY] DELETE /users/{admin_id} oleh user biasa");
+                assertRejectedAuthOrForbidden(delOther, "[KNOWN SECURITY] DELETE /users/{other_id} oleh user biasa");
         }
 
         @Test(priority = 125, description = "SIT_USR_API_125: Ambil daftar tipe cuti aktif beserta day_limit melalui GET /leave-type & tolak akses tanpa token", groups = {

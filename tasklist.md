@@ -10,13 +10,13 @@ Total cakupan pengujian SIT v5.1: **304 Test Cases User** (**160 Web UI** + **14
 
 | Fase | Deskripsi Fase | Output Deliverables | Penanggung Jawab | Status |
 | :---: | :--- | :--- | :---: | :---: |
-| **Fase 1** | Review Acuan (`WebKaryawanPrompt.md`, `docs/SIT_Scenario_Magang_Hadir.xlsx` v5, `reference.md`) & Sinkronisasi Blueprint ke SIT v5 | `plan.md`, `tasklist.md`, `WebKaryawanPrompt.md` (disinkronkan ke SIT v5: 276 TCs) | Shared Foundation | ✅ Selesai |
+| **Fase 1** | Review Acuan (`WebKaryawanPrompt.md`, `docs/SIT_Scenario_Magang_Hadir.xlsx` v5.1, `reference.md`) & Sinkronisasi Blueprint ke SIT v5.1 | `plan.md`, `tasklist.md`, `WebKaryawanPrompt.md` (disinkronkan ke SIT v5.1: 304 TCs) | Shared Foundation | ✅ Selesai |
 | **Fase 2** | Maven Setup (`pom.xml` Java 21, Selenium `4.52.0`, REST Assured `6.3.0`), Struktur Package Terisolasi (`deny` & `aji`), & Fixture `testdata/*` | `pom.xml`, `.gitignore`, `.gitattributes`, `.editorconfig`, `docs/SIT_Scenario_Magang_Hadir.xlsx`, `src/test/resources/testdata/*` | Shared Foundation | ✅ Selesai |
-| **Fase 3** | Core Thread-Safe Engine, Keamanan Base64, Dual-API (`FeathersJS` + `Next.js BFF`), MUI Helpers, & `AdminApiHelper` SIT v5 | `SecurityUtil`, `Constants`, `DriverFactory`, `BasePage`, `BaseTest`, `BaseApiTest`, `AdminApiHelper`, `ScreenshotUtil`, `ExtentManager`, `ExtentTestManager`, `TestListener` | Shared Foundation | ✅ Selesai |
-| **Fase 4** | Page Object Model (POM) Web Karyawan Implementation (Inspeksi Locator Live Mobile Mirroring) | POM Deny (`pages/user/deny/*`: 6 Classes; `UserLoginPage` ✅ di `main`) & POM Aji (`pages/user/aji/*`: 6 Classes) | Deny & Aji | 🔄 In Progress (`UserLoginPage` selesai & terintegrasi di `main`) |
-| **Fase 5** | Automated Tests Implementation (160 Web UI + 116 REST Assured API + 6 List InfiniteScroll + 11 E2E Lintas Modul + Strict QA `[KNOWN DEFECT]`) | `tests/user/deny/*` (84 UI; `UserLoginTest` ✅ 12/12 di `main`), `tests/user/aji/*` (76 UI), `UserGroupAApiTest` (55 API), `UserGroupBApiTest` (61 API) | Deny (139 TCs) & Aji (137 TCs) | 🔄 In Progress (`UserLoginTest` 12/12 selesai di `main`) |
-| **Fase 6** | 7 TestNG Sequential Suites (`testng`, `deny`, `aji`, `smoke`, `regression`, `positive`, `negative`) & Verifikasi Headless | `src/test/resources/testng*.xml` (7 suite XML sekuensial, `UserLoginTest` terdaftar aktif) | Deny & Aji | 🔄 7 Suite XML Aktif (Login Terverifikasi) |
-| **Fase 7** | Validasi `ExtentReport.html`, Sinkronisasi Status SIT v5, Dokumentasi `README.md` & `walkthrough.md` | `reports/ExtentReport.html`, `README.md`, `walkthrough.md` | Shared Deliverable | ⏳ Pending |
+| **Fase 3** | Core Thread-Safe Engine, Keamanan Base64, Dual-API (`FeathersJS` + `Next.js BFF`), MUI Helpers, & `AdminApiHelper` SIT v5.1 | `SecurityUtil`, `Constants`, `DriverFactory`, `BasePage`, `BaseTest`, `BaseApiTest`, `AdminApiHelper`, `ScreenshotUtil`, `ExtentManager`, `ExtentTestManager`, `TestListener` | Shared Foundation | ✅ Selesai |
+| **Fase 4** | Page Object Model (POM) Web Karyawan Implementation (Inspeksi Locator Live Mobile Mirroring) | POM Deny (`pages/user/deny/*`: 6/6 Classes ✅ di `main`) & POM Aji (`pages/user/aji/*`: 6 Classes) | Deny & Aji | 🔄 In Progress (POM Deny 100% ✅ di `main`; sisa POM Aji) |
+| **Fase 5** | Automated Tests Implementation (160 Web UI + 144 REST Assured API + 6 List InfiniteScroll + 11 E2E Lintas Modul + Strict QA `[KNOWN DEFECT]`) | `tests/user/deny/*` (84 UI ✅ di `main`), `tests/user/aji/*` (76 UI), `UserGroupAApiTest` (71 API ✅ di `main`), `UserGroupBApiTest` (73 API) | Deny (155 TCs) & Aji (149 TCs) | 🔄 In Progress (**Deny 155/155 [100% ✅ di `main`]**, Aji 0/149) |
+| **Fase 6** | 7 TestNG Sequential Suites (`testng`, `deny`, `aji`, `smoke`, `regression`, `positive`, `negative`) & Verifikasi Headless | `src/test/resources/testng*.xml` (7 suite XML sekuensial v5.1; modul Deny terverifikasi) | Deny & Aji | 🔄 7 Suite XML Aktif (Deny Terverifikasi) |
+| **Fase 7** | Validasi `ExtentReport.html`, Sinkronisasi Status SIT v5.1, Dokumentasi `README.md` & `walkthrough.md` | `reports/ExtentReport.html`, `README.md`, `walkthrough.md` | Shared Deliverable | ⏳ Pending |
 
 ---
 
@@ -92,7 +92,7 @@ Total cakupan pengujian SIT v5.1: **304 Test Cases User** (**160 Web UI** + **14
 
 ---
 
-### 🔹 Fase 5: Implementasi Automated Test Suites (276 User TCs)
+### 🔹 Fase 5: Implementasi Automated Test Suites (304 User TCs)
 *(Setiap `@Test` wajib mencantumkan ID SIT pada `description`, `ExtentTestManager.logInfo(...)`, serta grup `"regression"` + `"positive"`/`"negative"` [+ `"smoke"` untuk critical path]. Untuk `Ready (Known Defect)`, wajib assert Expected Result standar dengan prefix `"[KNOWN DEFECT] ..."`.)*
 
 #### 👤 Bagian Tester Deny (`155 TCs = 84 UI + 71 API`):
@@ -105,7 +105,7 @@ Total cakupan pengujian SIT v5.1: **304 Test Cases User** (**160 Web UI** + **14
 - [x] **5.7.** `UserCrossModuleDenyE2ETest.java` (`SIT_USR_UI_150–154`: 5 TCs — E2E Lintas Modul Hybrid API+UI: aktif/nonaktif user via `PATCH /users/{id}` `isVerified=true` `150–151`, Approve/Reject Izin Off `152–153`, cancel cuti via `POST /api/cancel/leave` & sinkronisasi kuota `154`) — **✅ Selesai di branch `feature/deny-user-e2e` (`5/5 PASS` & `Smoke 17/17 PASS`).**
 - [x] **5.8.** `UserGroupAApiTest.java` (`SIT_USR_API_001–018`, `044–049`, `053–083`, `117–132`: **71 TCs** — `/authentication` + Tampered JWT `117–118`, BFF `/api/login` `119`, `/auth-management` `081–082`, `/users` NIK `D8240010`/register/IDOR/Mass-Assignment/DELETE `013, 053–055, 078–080, 083, 132`, `/off-permit` + `/late-permit` + `/early-leave` Self-Approval & IDOR `056–063, 120–124`, `/upload` MIME Spoofing & `/uploads/*` `064–067, 130–131`, BFF `/api/sick` & `/api/activity/sick` `068–071`, `/share-report` `072–075`, Cuti `POST /api/leave`, `/leave-type`, `/request-leave` IDOR/Self-Approval, `/api/cancel/leave` RBAC & BFF No-Cookie `045–047 [KNOWN DEFECT], 076–077, 125–129`) — **✅ Selesai di branch `feature/deny-user-api-a` (`45 PASS` + `26 Strict QA [KNOWN DEFECT]/[KNOWN SECURITY]` (`0 Errors, 0 Skipped`), API Smoke `11/11 PASS` pada `testng-smoke.xml` `26/28`).**
 
-#### 👤 Bagian Tester Aji (`137 TCs = 76 UI + 61 API`):
+#### 👤 Bagian Tester Aji (`149 TCs = 76 UI + 73 API`):
 - [ ] **5.9.** `AttendanceTest.java` (`SIT_USR_UI_036–058`: 23 TCs — Header, **Kehadiranmu** filter Bulan/Tahun & 7 kartu metrik, kamera fake stream, WFO/WFH, Clock-In/Out, dialog `"Anda belum melakukan absen keluar"` -> `/apps/absent/correction/[id]`, CDP geolocation & permission `050–052`, serta Strict QA `[KNOWN DEFECT]` `046`).
 - [ ] **5.10.** `ActivityHistoryTest.java` (`SIT_USR_UI_059–065`: 7 TCs — Log Absen `/apps/absent/activity`, filter tanggal, detail, *InfiniteScroll*, tombol `< Kembali`, serta Strict QA `[KNOWN DEFECT]` `061`).
 - [ ] **5.11.** `CorrectionTest.java` (`SIT_USR_UI_066–077`: 12 TCs — pengajuan koreksi masuk/pulang, validasi tanggal masa depan, Reset, `Lihat Selengkapnya`, filter, verifikasi status & Reject Notes, `< Kembali`, serta *InfiniteScroll*).
@@ -118,14 +118,17 @@ Total cakupan pengujian SIT v5.1: **304 Test Cases User** (**160 Web UI** + **14
 ---
 
 ### 🔹 Fase 6: Konfigurasi 7 Suite Runner Sekuensial & Verifikasi Eksekusi Headless
-- [x] **6.1.** Sinkronkan `src/test/resources/testng.xml` (Master Sequential Suite SIT v5: **276 TCs**, `browser=chrome`, `headless=true`, `UserLoginTest` terdaftar aktif).
-- [x] **6.2.** Sinkronkan `testng-deny.xml` (**139 TCs**, sekuensial, `UserLoginTest` aktif) & `testng-aji.xml` (**137 TCs**, sekuensial).
+> [!IMPORTANT]
+> **Aturan Eksekusi Sekuensial (Lintas Proyek Admin & User)**: Dilarang menjalankan suite **`final-project-admin`** dan **`final-project-karyawan`** secara bersamaan/paralel karena kedua proyek berbagi server staging (`api-dev.dikahadir.com` / `magang.dikahadir.com`) dan akun uji bersama (`admin@hadir.com` / `hadirsqa1@gmail.com`). Jalankan secara bergantian/sekuensial, dan **wajib dokumentasikan aturan ini di `README.md`** saat Fase 7.
+
+- [x] **6.1.** Sinkronkan `src/test/resources/testng.xml` (Master Sequential Suite SIT v5.1: **304 TCs**, `browser=chrome`, `headless=true`, seluruh modul Tester Deny terdaftar aktif).
+- [x] **6.2.** Sinkronkan `testng-deny.xml` (**155 TCs**, sekuensial, seluruh modul Deny aktif) & `testng-aji.xml` (**149 TCs**, sekuensial).
 - [x] **6.3.** Buat 4 suite kategori selaras Admin: `testng-smoke.xml` (`smoke`), `testng-regression.xml` (`regression`), `testng-positive.xml` (`positive`), dan `testng-negative.xml` (`negative`).
-- [ ] **6.4.** Jalankan verifikasi penuh seluruh 276 TCs pada ketujuh suite XML setelah seluruh feature branch Deny & Aji selesai di-merge ke `main`.
+- [ ] **6.4.** Jalankan verifikasi penuh seluruh 304 TCs secara **sekuensial** (tidak bersamaan dengan suite `final-project-admin`) pada ketujuh suite XML setelah seluruh feature branch Deny & Aji selesai di-merge ke `main`.
 
 ---
 
 ### 🔹 Fase 7: Validasi ExtentReports, Sinkronisasi Status SIT & Finalisasi
-- [ ] **7.1.** Validasi `reports/ExtentReport.html`: pastikan Dark Theme aktif, seluruh 276 Test ID tercatat, tag `Tester Deny` / `Tester Aji` / `Selenium Web UI` / `REST Assured API` / `smoke` / `regression` / `positive` / `negative` terisi, dan Base64 screenshot + pesan `[KNOWN DEFECT]` terekam akurat.
+- [ ] **7.1.** Validasi `reports/ExtentReport.html`: pastikan Dark Theme aktif, seluruh 304 Test ID tercatat, tag `Tester Deny` / `Tester Aji` / `Selenium Web UI` / `REST Assured API` / `smoke` / `regression` / `positive` / `negative` terisi, dan Base64 screenshot + pesan `[KNOWN DEFECT]` terekam akurat.
 - [ ] **7.2.** Sinkronisasi hasil eksekusi aktual ke `docs/SIT_Scenario_Magang_Hadir.xlsx`.
-- [ ] **7.3.** Buat `README.md` akhir dan perbarui `walkthrough.md`.
+- [ ] **7.3.** Buat `README.md` akhir (wajib cantumkan **aturan eksekusi sekuensial/bergantian** — jangan jalankan suite **Admin** dan **Karyawan** bersamaan secara paralel karena berbagi server & akun staging `admin@hadir.com` / `hadirsqa1@gmail.com`) dan perbarui `walkthrough.md`.
