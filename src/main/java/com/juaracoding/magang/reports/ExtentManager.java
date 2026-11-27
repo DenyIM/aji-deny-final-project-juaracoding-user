@@ -53,9 +53,9 @@ public final class ExtentManager {
         extentReports.setSystemInfo("API Base URI", Constants.API_BASE_URI);
         extentReports.setSystemInfo("Java Version", System.getProperty("java.version"));
         extentReports.setSystemInfo("Operating System", System.getProperty("os.name"));
-        extentReports.setSystemInfo("SDET Tester Deny", "Karyawan Features Group A (139 TCs: 84 UI + 55 API)");
-        extentReports.setSystemInfo("SDET Tester Aji", "Karyawan Features Group B (137 TCs: 76 UI + 61 API)");
-        extentReports.setSystemInfo("Total Karyawan Scenarios", "276 Test Cases (160 UI + 116 API)");
+        extentReports.setSystemInfo("SDET Tester Deny", "Karyawan Features Group A (155 TCs: 84 UI + 71 API)");
+        extentReports.setSystemInfo("SDET Tester Aji", "Karyawan Features Group B (149 TCs: 76 UI + 73 API)");
+        extentReports.setSystemInfo("Total Karyawan Scenarios", "304 Test Cases (160 UI + 144 API)");
 
         logger.info("ExtentReports 5 initialized at: {}", Constants.EXTENT_REPORT_FILE);
     }

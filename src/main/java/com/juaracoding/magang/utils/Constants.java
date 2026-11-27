@@ -67,6 +67,7 @@ public final class Constants {
     // ==========================================
     public static final String BFF_SESSION_COOKIE_NAME = "hadir_web_magang";
     public static final String BFF_LOGIN_ENDPOINT = "/api/login";
+    public static final String BFF_LOGOUT_ENDPOINT = "/api/logout";
     public static final String BFF_USER_SUMMARY_ENDPOINT = "/api/users/summary";
     public static final String BFF_USER_LAST_ACTIVITY_ENDPOINT = "/api/activity/user-last-activity";
     public static final String BFF_USER_CHECK_CORRECTION_ENDPOINT = "/api/activity/user-check-correction";

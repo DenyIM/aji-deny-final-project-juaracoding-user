@@ -158,18 +158,20 @@ public abstract class BaseApiTest {
         String plainPassword = SecurityUtil.decode(encodedPassword);
 
         Map<String, Object> payload = new HashMap<>();
+        payload.put("strategy", "local");
         payload.put("email", email);
         payload.put("password", plainPassword);
 
-        Response response = given()
+        Response response = executeWithConnectRetry(() -> given()
                 .spec(buildBffRequestSpec())
                 .body(payload)
         .when()
                 .post(Constants.BFF_LOGIN_ENDPOINT)
         .then()
                 .extract()
-                .response();
+                .response(), "POST /api/login (" + email + ")");
 
+        STATIC_LOGGER.info("BFF login for [{}] -> HTTP {}", email, response.getStatusCode());
         return response.getCookie(Constants.BFF_SESSION_COOKIE_NAME);
     }
 
@@ -226,5 +228,36 @@ public abstract class BaseApiTest {
             builder.addCookie(Constants.BFF_SESSION_COOKIE_NAME, sessionCookie.trim());
         }
         return builder.build();
+    }
+
+    /**
+     * RequestSpecification tanpa Authorization header untuk pengujian unauthenticated FeathersJS.
+     */
+    protected RequestSpecification unauthenticatedJsonSpec() {
+        return buildDefaultRequestSpec();
+    }
+
+    /**
+     * RequestSpecification tanpa cookie sesi untuk pengujian unauthenticated Next.js BFF.
+     */
+    protected RequestSpecification unauthenticatedBffSpec() {
+        return buildBffRequestSpec();
+    }
+
+    /**
+     * Mengubah segmen signature JWT valid untuk menguji penolakan Tampered JWT Signature (HTTP 401).
+     */
+    protected String tamperJwtSignature(String validJwt) {
+        if (validJwt == null || !validJwt.contains(".")) {
+            return "invalid.jwt.signature";
+        }
+        String[] parts = validJwt.split("\\.");
+        if (parts.length != 3) {
+            return validJwt + "tampered";
+        }
+        String sig = parts[2];
+        char flipped = sig.endsWith("A") ? 'B' : 'A';
+        String tamperedSig = (sig.length() > 1 ? sig.substring(0, sig.length() - 1) : "") + flipped;
+        return parts[0] + "." + parts[1] + "." + tamperedSig;
     }
 }
