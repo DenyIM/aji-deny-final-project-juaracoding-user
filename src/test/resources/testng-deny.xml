@@ -23,6 +23,7 @@
             <class name="com.juaracoding.magang.tests.user.deny.PermitTest" />
             <class name="com.juaracoding.magang.tests.user.deny.LeaveAndSickTest" />
             <class name="com.juaracoding.magang.tests.user.deny.DownloadReportTest" />
+            <class name="com.juaracoding.magang.tests.user.deny.UserCrossModuleDenyE2ETest" />
         </classes>
     </test>
 

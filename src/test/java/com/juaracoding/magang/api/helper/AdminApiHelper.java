@@ -876,14 +876,14 @@ public final class AdminApiHelper {
         body.put("is_active", isActive);
         body.put("isVerified", true);
 
-        Response res = given()
+        Response res = BaseApiTest.executeWithConnectRetry(() -> given()
                 .spec(authSpec(admin.token()))
                 .body(body)
         .when()
                 .patch(Constants.API_USERS_ENDPOINT + "/" + userId)
         .then()
                 .extract()
-                .response();
+                .response(), "PATCH /users/" + userId);
 
         logger.info("Hybrid Admin PATCH /users/{} (is_active={}, isVerified=true) -> HTTP {}",
                 userId, isActive, res.getStatusCode());
@@ -891,8 +891,27 @@ public final class AdminApiHelper {
     }
 
     /**
-     * Membatalkan pengajuan cuti Karyawan oleh Admin melalui endpoint terverifikasi
-     * {@code POST /cancel-leave} (kebutuhan E2E SIT_USR_UI_134).
+     * Mengambil detail satu record transaksi cuti melalui {@code GET /request-leave/{id}}.
+     *
+     * @param leaveId ID transaksi cuti
+     * @return Response GET /request-leave/{id}
+     */
+    public static Response getRequestLeaveById(String leaveId) {
+        ApiSession admin = loginAsHybridAdmin();
+        Response res = BaseApiTest.executeWithConnectRetry(() -> given()
+                .spec(authSpec(admin.token()))
+        .when()
+                .get(Constants.API_REQUEST_LEAVE_ENDPOINT + "/" + leaveId)
+        .then()
+                .extract()
+                .response(), "GET /request-leave/" + leaveId);
+        logger.info("Hybrid Admin GET /request-leave/{} -> HTTP {}", leaveId, res.getStatusCode());
+        return res;
+    }
+
+    /**
+     * Membatalkan pengajuan cuti Karyawan oleh Admin melalui jalur resmi portal Admin
+     * {@code POST /api/cancel/leave} (kebutuhan E2E SIT_USR_UI_154).
      *
      * @param leaveTransId ID transaksi cuti
      * @return true jika HTTP 200/201
@@ -902,11 +921,11 @@ public final class AdminApiHelper {
     }
 
     /**
-     * Membatalkan pengajuan cuti Karyawan oleh Admin melalui endpoint terverifikasi
-     * {@code POST /cancel-leave} dengan payload {@code leave_trans_id} dan {@code lv_approve_notes}
-     * (kebutuhan E2E SIT_USR_UI_134).
+     * Membatalkan pengajuan cuti Karyawan oleh Admin melalui Next.js BFF {@code POST /api/cancel/leave}
+     * (dengan payload terverifikasi {@code leave_id}, {@code lv_trans_id}, {@code lv_approve_notes})
+     * serta fallback ke {@code POST /cancel-leave} bila record berasal dari sync HRIS non-null.
      *
-     * @param leaveTransId ID transaksi cuti (leave_trans_id)
+     * @param leaveTransId ID transaksi cuti (request-leave id)
      * @param approveNotes alasan pembatalan cuti (lv_approve_notes)
      * @return true jika pembatalan berhasil (HTTP 200/201)
      */
@@ -915,23 +934,65 @@ public final class AdminApiHelper {
             logger.warn("Cannot cancel blank leaveTransId");
             return false;
         }
-        ApiSession admin = loginAsHybridAdmin();
-        Map<String, Object> body = new HashMap<>();
-        body.put("leave_trans_id", leaveTransId);
-        body.put("lv_approve_notes",
-                (approveNotes != null && !approveNotes.isBlank()) ? approveNotes : "E2E Cancel Cuti Admin");
+        String notes = (approveNotes != null && !approveNotes.isBlank())
+                ? approveNotes
+                : "E2E Cancel Cuti Admin";
 
-        Response res = given()
-                .spec(authSpec(admin.token()))
-                .body(body)
-        .when()
-                .post(Constants.API_CANCEL_LEAVE_ENDPOINT)
-        .then()
-                .extract()
-                .response();
+        Object hrisLvTransId = null;
+        try {
+            Response leaveDetail = getRequestLeaveById(leaveTransId);
+            if (leaveDetail.getStatusCode() == 200) {
+                hrisLvTransId = leaveDetail.jsonPath().get("hris_lv_trans_id");
+            }
+        } catch (Exception e) {
+            logger.warn("Could not inspect hris_lv_trans_id for leave [{}]: {}", leaveTransId, e.getMessage());
+        }
 
-        logger.info("Hybrid Admin POST /cancel-leave (leave_trans_id={}) -> HTTP {}", leaveTransId, res.getStatusCode());
-        return res.getStatusCode() == 200 || res.getStatusCode() == 201;
+        Map<String, String> adminCookies = loginBffCookies(
+                Constants.HYBRID_ADMIN_EMAIL, Constants.HYBRID_ADMIN_PASSWORD_ENCODED);
+        if (!adminCookies.isEmpty()) {
+            Map<String, Object> bffBody = new HashMap<>();
+            bffBody.put("leave_id", leaveTransId);
+            bffBody.put("lv_trans_id", hrisLvTransId);
+            bffBody.put("lv_approve_notes", notes);
+
+            Response bffRes = BaseApiTest.executeWithConnectRetry(() -> given()
+                    .baseUri(Constants.BASE_URL)
+                    .relaxedHTTPSValidation()
+                    .cookies(adminCookies)
+                    .contentType("application/json")
+                    .body(bffBody)
+            .when()
+                    .post(Constants.BFF_CANCEL_LEAVE_ENDPOINT)
+            .then()
+                    .extract()
+                    .response(), "POST /api/cancel/leave");
+            logger.info("Hybrid Admin BFF POST /api/cancel/leave (leave_id={}) -> HTTP {} body={}",
+                    leaveTransId, bffRes.getStatusCode(), bffRes.asString());
+            if (bffRes.getStatusCode() == 200 || bffRes.getStatusCode() == 201) {
+                return true;
+            }
+        }
+
+        if (hrisLvTransId != null) {
+            ApiSession admin = loginAsHybridAdmin();
+            Map<String, Object> body = new HashMap<>();
+            body.put("leave_trans_id", hrisLvTransId);
+            body.put("lv_approve_notes", notes);
+
+            Response res = BaseApiTest.executeWithConnectRetry(() -> given()
+                    .spec(authSpec(admin.token()))
+                    .body(body)
+            .when()
+                    .post(Constants.API_CANCEL_LEAVE_ENDPOINT)
+            .then()
+                    .extract()
+                    .response(), "POST /cancel-leave");
+            logger.info("Hybrid Admin POST /cancel-leave (leave_trans_id={}) -> HTTP {}",
+                    hrisLvTransId, res.getStatusCode());
+            return res.getStatusCode() == 200 || res.getStatusCode() == 201;
+        }
+        return false;
     }
 
     /**
@@ -1041,13 +1102,13 @@ public final class AdminApiHelper {
         String effectiveToken = (bearerToken != null && !bearerToken.isBlank())
                 ? bearerToken
                 : loginAsHybridAdmin().token();
-        Response res = given()
+        Response res = BaseApiTest.executeWithConnectRetry(() -> given()
                 .spec(authSpec(effectiveToken))
         .when()
                 .get(Constants.API_PROJECT_LEAVE_ENDPOINT + "/" + userId)
         .then()
                 .extract()
-                .response();
+                .response(), "GET /project-leave/" + userId);
 
         logger.info("Hybrid GET /project-leave/{} -> HTTP {}", userId, res.getStatusCode());
         return res;
@@ -1093,7 +1154,7 @@ public final class AdminApiHelper {
         loginPayload.put("email", userEmail);
         loginPayload.put("password", SecurityUtil.decode(encodedPassword));
 
-        Response loginRes = given()
+        Response loginRes = BaseApiTest.executeWithConnectRetry(() -> given()
                 .baseUri(Constants.BASE_URL)
                 .relaxedHTTPSValidation()
                 .contentType("application/json")
@@ -1102,7 +1163,7 @@ public final class AdminApiHelper {
                 .post(Constants.BFF_LOGIN_ENDPOINT)
         .then()
                 .extract()
-                .response();
+                .response(), "POST /api/login");
 
         Map<String, String> cookies = loginRes.getCookies();
         if (cookies == null || cookies.isEmpty()) {
