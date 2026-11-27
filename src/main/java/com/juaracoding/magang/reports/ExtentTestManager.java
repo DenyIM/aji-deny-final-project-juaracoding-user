@@ -30,8 +30,17 @@ public final class ExtentTestManager {
 
     public static void log(Status status, String message) {
         if (getTest() != null) {
-            getTest().log(status, message);
+            getTest().log(status, escapeHtml(message));
         }
+    }
+
+    private static String escapeHtml(String text) {
+        if (text == null) {
+            return "";
+        }
+        return text.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;");
     }
 
     public static void logInfo(String message) {
