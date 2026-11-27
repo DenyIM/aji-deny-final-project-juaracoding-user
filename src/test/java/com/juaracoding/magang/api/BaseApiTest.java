@@ -15,8 +15,11 @@ import org.slf4j.LoggerFactory;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Listeners;
 
+import java.net.ConnectException;
+import java.net.SocketTimeoutException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Supplier;
 
 import static io.restassured.RestAssured.given;
 
@@ -84,6 +87,47 @@ public abstract class BaseApiTest {
      * @param encodedPassword password ter-encode Base64
      * @return Response REST Assured
      */
+    private static final Logger STATIC_LOGGER = LoggerFactory.getLogger(BaseApiTest.class);
+
+    /**
+     * Mengeksekusi pemanggilan REST Assured dengan retry aman (maks 3x) khusus saat terjadi
+     * gangguan koneksi TCP/timeout sementara pada server staging (tidak memengaruhi error HTTP 4xx/5xx).
+     */
+    public static Response executeWithConnectRetry(Supplier<Response> requestCall, String operationName) {
+        RuntimeException lastEx = null;
+        for (int attempt = 1; attempt <= 3; attempt++) {
+            try {
+                return requestCall.get();
+            } catch (RuntimeException ex) {
+                if (isTransientNetworkException(ex) && attempt < 3) {
+                    lastEx = ex;
+                    STATIC_LOGGER.warn("Transient network error on [{}] (attempt {}/3): {}, retrying in 2s...",
+                            operationName, attempt, ex.getMessage());
+                    try {
+                        Thread.sleep(2000L);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        throw ex;
+                    }
+                    continue;
+                }
+                throw ex;
+            }
+        }
+        throw lastEx != null ? lastEx : new IllegalStateException("Retry exhausted for " + operationName);
+    }
+
+    private static boolean isTransientNetworkException(Throwable t) {
+        Throwable cur = t;
+        while (cur != null) {
+            if (cur instanceof ConnectException || cur instanceof SocketTimeoutException) {
+                return true;
+            }
+            cur = cur.getCause();
+        }
+        return false;
+    }
+
     public static Response authenticate(String email, String encodedPassword) {
         String plainPassword = SecurityUtil.decode(encodedPassword);
 
@@ -92,14 +136,14 @@ public abstract class BaseApiTest {
         payload.put("password", plainPassword);
         payload.put("strategy", "local");
 
-        return given()
+        return executeWithConnectRetry(() -> given()
                 .spec(buildDefaultRequestSpec())
                 .body(payload)
         .when()
                 .post(Constants.API_AUTH_ENDPOINT)
         .then()
                 .extract()
-                .response();
+                .response(), "POST /authentication (" + email + ")");
     }
 
     /**
