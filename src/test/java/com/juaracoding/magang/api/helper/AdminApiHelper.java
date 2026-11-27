@@ -113,20 +113,21 @@ public final class AdminApiHelper {
         }
         String mimeType = fileName.toLowerCase().endsWith(".png") ? "image/png" : "image/jpeg";
 
-        RequestSpecification req = given()
-                .baseUri(Constants.API_BASE_URI)
-                .relaxedHTTPSValidation()
-                .multiPart("uri", filePath.toFile(), mimeType);
-        if (bearerToken != null && !bearerToken.isBlank()) {
-            req.header("Authorization", "Bearer " + bearerToken.trim());
-        }
-
-        Response res = req
-                .when()
-                .post(Constants.API_UPLOAD_ENDPOINT)
-                .then()
-                .extract()
-                .response();
+        Response res = BaseApiTest.executeWithConnectRetry(() -> {
+            RequestSpecification req = given()
+                    .baseUri(Constants.API_BASE_URI)
+                    .relaxedHTTPSValidation()
+                    .multiPart("uri", filePath.toFile(), mimeType);
+            if (bearerToken != null && !bearerToken.isBlank()) {
+                req.header("Authorization", "Bearer " + bearerToken.trim());
+            }
+            return req
+                    .when()
+                    .post(Constants.API_UPLOAD_ENDPOINT)
+                    .then()
+                    .extract()
+                    .response();
+        }, "POST /upload (" + fileName + ")");
 
         logger.info("Hybrid POST /upload [{}] (mime={}) -> HTTP {}", fileName, mimeType, res.getStatusCode());
         if (res.getStatusCode() == 200 || res.getStatusCode() == 201) {
@@ -1345,6 +1346,38 @@ public final class AdminApiHelper {
                 .response();
         List<String> ids = res.jsonPath().getList("data.id");
         return (ids != null && !ids.isEmpty()) ? ids.get(0) : null;
+    }
+
+    /**
+     * Mengirim request POST /share-report dengan token eksplisit (termasuk uji token invalid/otorisasi).
+     */
+    public static Response postShareReport(
+            String bearerToken,
+            String companyId,
+            String uplinerId,
+            String dateFromYmd,
+            String dateToYmd
+    ) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("date_from", dateFromYmd);
+        body.put("date_to", dateToYmd);
+        body.put("company_id", companyId);
+        body.put("user_id", null);
+        body.put("nik", null);
+        body.put("job_department_id", null);
+        body.put("division_name", null);
+        body.put("upliner_id", uplinerId);
+
+        Response res = BaseApiTest.executeWithConnectRetry(() -> given()
+                .spec(authSpec(bearerToken))
+                .body(body)
+        .when()
+                .post(Constants.API_SHARE_REPORT_ENDPOINT)
+        .then()
+                .extract()
+                .response(), "POST /share-report");
+        logger.info("POST /share-report -> HTTP {}", res.getStatusCode());
+        return res;
     }
 
     /**

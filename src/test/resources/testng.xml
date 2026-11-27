@@ -27,6 +27,7 @@
             <class name="com.juaracoding.magang.tests.user.deny.ResetPasswordTest" />
             <class name="com.juaracoding.magang.tests.user.deny.PermitTest" />
             <class name="com.juaracoding.magang.tests.user.deny.LeaveAndSickTest" />
+            <class name="com.juaracoding.magang.tests.user.deny.DownloadReportTest" />
         </classes>
     </test>
 
