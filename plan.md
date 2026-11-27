@@ -3,7 +3,7 @@
 ## Goal Description
 Membangun **Enterprise Web UI & API Test Automation Framework** khusus untuk **portal Karyawan / User Magang (Mobile Mirroring)** pada platform **[HADIR Mobile Mirroring](https://magang.dikahadir.com/absen/login)** yang **100% selaras** secara arsitektur, versi dependensi, standar keamanan kredensial, pola eksekusi sekuensial, konvensi *Strict QA Known Defect*, dan pembagian kerja tim dengan repositori **Web Admin (`final-project-admin`)** serta acuan standar pada [reference.md](file:///c:/Users/Asus/Documents/JuaraCoding/Final/final-project-karyawan/reference.md).
 
-Kerangka kerja ini menggunakan **Java 21 LTS**, **Apache Maven**, **Selenium WebDriver `4.52.0`** (default `headless = true`), **REST Assured `6.3.0`**, **TestNG `7.12.0`**, **ExtentReports `5.1.2`** (Dark Theme + Base64 failure screenshot), **Apache POI `5.2.5`**, dan **Jackson Databind `2.17.2`**, mencakup **276 Test Cases User (SIT v5)** (**160 Web UI** + **116 REST Assured API**) dengan *Single Source of Truth* pada [docs/SIT_Scenario_Magang_Hadir.xlsx](file:///c:/Users/Asus/Documents/JuaraCoding/Final/final-project-karyawan/docs/SIT_Scenario_Magang_Hadir.xlsx) dan [WebKaryawanPrompt.md](file:///c:/Users/Asus/Documents/JuaraCoding/Final/final-project-karyawan/WebKaryawanPrompt.md).
+Kerangka kerja ini menggunakan **Java 21 LTS**, **Apache Maven**, **Selenium WebDriver `4.52.0`** (default `headless = true`), **REST Assured `6.3.0`**, **TestNG `7.12.0`**, **ExtentReports `5.1.2`** (Dark Theme + Base64 failure screenshot), **Apache POI `5.2.5`**, dan **Jackson Databind `2.17.2`**, mencakup **304 Test Cases User (SIT v5.1)** (**160 Web UI** + **144 REST Assured API**) dengan *Single Source of Truth* pada [docs/SIT_Scenario_Magang_Hadir.xlsx](file:///c:/Users/Asus/Documents/JuaraCoding/Final/final-project-karyawan/docs/SIT_Scenario_Magang_Hadir.xlsx) dan [WebKaryawanPrompt.md](file:///c:/Users/Asus/Documents/JuaraCoding/Final/final-project-karyawan/WebKaryawanPrompt.md).
 
 ---
 
@@ -34,8 +34,8 @@ Kerangka kerja ini menggunakan **Java 21 LTS**, **Apache Maven**, **Selenium Web
   - **Aturan Filter Tanggal `GET /activity`**: Gunakan operator FeathersJS `created_at[$gte]` dan `created_at[$lte]` — **jangan** menggunakan `startDate`/`start_date` yang memicu SQL 500 `Unknown column`.
 - **Static Uploads Host (`API_STATIC_UPLOADS_BASE_URI = "https://api-dev.dikahadir.com/uploads"`)**: Verifikasi aksesibilitas file gambar hasil upload.
 - **Next.js BFF Routes (`BASE_URL = "https://magang.dikahadir.com"`)**:
-  - Menggunakan cookie sesi `hadir_app_magang` hasil `POST /api/login`:
-    - `/api/users/summary`, `/api/activity/user-last-activity`, `/api/activity/user-check-correction`, `/api/leave/[id]` (`SIT_USR_API_111–116`)
+  - Menggunakan cookie sesi `hadir_web_magang` hasil `POST /api/login`:
+    - `/api/users/summary`, `/api/activity/user-last-activity`, `/api/activity/user-check-correction`, `/api/leave`, `/api/leave/[id]`, `/api/cancel/leave` (`SIT_USR_API_045–047, 111–116, 127–129, 142–143`)
     - `/api/sick` & `/api/activity/sick` (`SIT_USR_API_068–071`)
     - `/api/leave/project-leave/{other_id}` (`SIT_USR_API_077`)
     - `/api/client/generate-report`, `/api/client/leave-report`, `/api/client/overtime-report` (`SIT_USR_API_097–099` — RBAC non-client isolation).
@@ -101,9 +101,9 @@ Mengacu langsung pada [docs/SIT_Scenario_Magang_Hadir.xlsx](file:///c:/Users/Asu
 
 | Tester | Cakupan Web UI (`160 TCs`) | Cakupan REST Assured API (`116 TCs`) | Total & Bobot |
 | :--- | :--- | :--- | :---: |
-| **👤 Tester Deny** | **84 Web UI TCs** (`pages.user.deny` & `tests.user.deny`):<br>1. `UserLoginTest` — `Autentikasi-Login` (`SIT_USR_UI_001–012`: 12 TCs — **✅ Selesai & Terintegrasi di `main`**)<br>2. `RegisterTest` — `Autentikasi-Register` (`SIT_USR_UI_013–025`: 13 TCs — form 5 field, ikon mata & Known Defect foto)<br>3. `ResetPasswordTest` — `Autentikasi-Reset Password` (`SIT_USR_UI_026–035`: 10 TCs, termasuk OTP & 2 ikon mata)<br>4. `PermitTest` — `Pengajuan-Izin` (`SIT_USR_UI_078–091`: 14 TCs — 3 tab, Total, Reset, `< Kembali`, *InfiniteScroll*)<br>5. `LeaveAndSickTest` — `Pengajuan-Cuti & Sakit` (`SIT_USR_UI_103–126`: Cuti `103–115` [13] + Sakit `116–126` [11] = 24 TCs — Tab Info Cuti, Kalender Batal/Simpan, *InfiniteScroll*)<br>6. `DownloadReportTest` — `Profil-Download Report` (`SIT_USR_UI_136–141`: 6 TCs — Harian, Mingguan, Bulanan, `< Kembali`)<br>7. `UserCrossModuleDenyE2ETest` — `Integrasi Lintas Modul (Hybrid API+UI)` (`SIT_USR_UI_150–154`: 5 TCs) | **55 API TCs** (`UserGroupAApiTest`):<br>1. User Auth & `/auth-management` Reset Password (`SIT_USR_API_001–010`: 10 TCs)<br>2. Registration & NIK Check (`SIT_USR_API_011–018`: 8 TCs; NIK aktif `D8240010`)<br>3. Leaves/Izin/Sakit + Late/Early Permits (`SIT_USR_API_044–049, 056–063`: 14 TCs)<br>4. Multipart Upload Security & Next.js BFF Sick Docs (`SIT_USR_API_064–071`: 8 TCs)<br>5. Share Report Export & IDOR (`SIT_USR_API_072–075`: 4 TCs)<br>6. Project-Leave, Profile, Critical IDOR & Mass-Assignment Security (`SIT_USR_API_053–055, 076–083`: 11 TCs) | **139 TCs** (50.4%) |
-| **👤 Tester Aji** | **76 Web UI TCs** (`pages.user.aji` & `tests.user.aji`):<br>1. `AttendanceTest` — `Presensi-Beranda & Lupa Pulang` (`SIT_USR_UI_036–058`: 23 TCs — Kehadiranmu Bulan/Tahun + 7 kartu, Fake Camera/GPS CDP & `/correction/[id]`)<br>2. `ActivityHistoryTest` — `Presensi-Log Absen` (`SIT_USR_UI_059–065`: 7 TCs + *InfiniteScroll*)<br>3. `CorrectionTest` — `Pengajuan-Koreksi Absen` (`SIT_USR_UI_066–077`: 12 TCs — Drawer, Reset, Lihat Selengkapnya, `< Kembali`, *InfiniteScroll*)<br>4. `OvertimeTest` — `Pengajuan-Lembur` (`SIT_USR_UI_092–102`: 11 TCs `/apps/absent/overtime-client` — Reset, Total, `< Kembali`, *InfiniteScroll*)<br>5. `UserProfileTest` — `Profil-Menu Utama & Ubah Password` (`SIT_USR_UI_127–135`: 9 TCs — Burger drawer, 2 field + 2 ikon mata, modal Sukses)<br>6. `LeaderStaffTest` — `Leader-Staff & Approval Bawahan` (`SIT_USR_UI_142–149`: 8 TCs — `/apps/absent/staff`, `/leave/[id]`, `/overtime/[id]`)<br>7. `UserCrossModuleAjiE2ETest` — `Integrasi Lintas Modul (Hybrid API+UI)` (`SIT_USR_UI_155–160`: 6 TCs, termasuk E2E Kuota Cuti `160`) | **61 API TCs** (`UserGroupBApiTest`):<br>1. Attendance Clock-In/Out, `/activity/request-activity` & `/user-summary` (`SIT_USR_API_019–030, 090–096`: 19 TCs)<br>2. Activity Log (`created_at[$gte]`/`[$lte]`) & IDOR Security (`SIT_USR_API_031–038`: 8 TCs)<br>3. Corrections (`SIT_USR_API_039–043`: 5 TCs)<br>4. Overtimes & Business Trips (`SIT_USR_API_050–052, 084–089`: 9 TCs)<br>5. Leader/Client BFF Isolation (`/api/client/*`), Query Hardening (`$limit`, `$skip`, operator injection), Self-Approval RBAC & BFF Summary/Staff (`SIT_USR_API_097–116`: 20 TCs) | **137 TCs** (49.6%) |
-| **TOTAL** | **160 Web UI TCs** | **116 API TCs** | **276 TCs** |
+| **👤 Tester Deny** | **84 Web UI TCs** (`pages.user.deny` & `tests.user.deny` — **✅ Selesai 100% di `main`**) | **71 API TCs** (`UserGroupAApiTest`: `SIT_USR_API_001–018, 044–049, 053–083, 117–132`) | **155 TCs** (51.0%) |
+| **👤 Tester Aji** | **76 Web UI TCs** (`pages.user.aji` & `tests.user.aji`) | **73 API TCs** (`UserGroupBApiTest`: `SIT_USR_API_019–043, 050–052, 084–116, 133–144`) | **149 TCs** (49.0%) |
+| **TOTAL** | **160 Web UI TCs** | **144 API TCs** | **304 TCs** |
 
 ---
 
@@ -169,15 +169,15 @@ final-project-karyawan/
         │   │   ├── helper/
         │   │   │   └── AdminApiHelper.java  # Hybrid seeding, POST /cancel-leave, /project-leave/{id}, /upload MIME, E2E helpers
         │   │   └── user/
-        │   │       ├── UserGroupAApiTest.java # Tester Deny (55 API TCs)
-        │   │       └── UserGroupBApiTest.java # Tester Aji (61 API TCs)
+        │   │       ├── UserGroupAApiTest.java # Tester Deny (71 API TCs)
+        │   │       └── UserGroupBApiTest.java # Tester Aji (73 API TCs)
         │   └── tests/user/
-        │       ├── deny/                    # UserLoginTest (Done), RegisterTest, ResetPasswordTest, PermitTest, LeaveAndSickTest, DownloadReportTest, UserCrossModuleDenyE2ETest
+        │       ├── deny/                    # UserLoginTest, RegisterTest, ResetPasswordTest, PermitTest, LeaveAndSickTest, DownloadReportTest, UserCrossModuleDenyE2ETest (84 UI TCs - Done)
         │       └── aji/                     # AttendanceTest, ActivityHistoryTest, CorrectionTest, OvertimeTest, UserProfileTest, LeaderStaffTest, UserCrossModuleAjiE2ETest
         └── resources/
-            ├── testng.xml                   # Master Sequential Suite Karyawan (276 TCs, headless=true)
-            ├── testng-deny.xml              # Sequential Suite Tester Deny (139 TCs, headless=true)
-            ├── testng-aji.xml               # Sequential Suite Tester Aji (137 TCs, headless=true)
+            ├── testng.xml                   # Master Sequential Suite Karyawan (304 TCs, headless=true)
+            ├── testng-deny.xml              # Sequential Suite Tester Deny (155 TCs, headless=true)
+            ├── testng-aji.xml               # Sequential Suite Tester Aji (149 TCs, headless=true)
             ├── testng-smoke.xml             # Category Suite: smoke
             ├── testng-regression.xml        # Category Suite: regression
             ├── testng-positive.xml          # Category Suite: positive
